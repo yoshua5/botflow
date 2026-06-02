@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BotMind AI - Crea tu Bot de WhatsApp con IA</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&amp;family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#2f2ebe",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "secondary": "#5c5f61",
+                    "outline-variant": "#c2c6d9",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary": "#4142ce",
+                    "on-tertiary": "#ffffff",
+                    "surface-bright": "#faf8ff",
+                    "surface-container-highest": "#dae2fd",
+                    "on-secondary-fixed-variant": "#444749",
+                    "primary-fixed": "#dbe1ff",
+                    "inverse-on-surface": "#eef0ff",
+                    "inverse-primary": "#b4c5ff",
+                    "surface-dim": "#d2d9f4",
+                    "surface-tint": "#0053da",
+                    "tertiary-fixed": "#e1e0ff",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "on-surface-variant": "#424656",
+                    "surface-container-low": "#f2f3ff",
+                    "on-background": "#131b2e",
+                    "tertiary-container": "#5a5de8",
+                    "on-primary-fixed": "#00174b",
+                    "on-surface": "#131b2e",
+                    "outline": "#737687",
+                    "primary-container": "#0062ff",
+                    "on-primary-container": "#f3f3ff",
+                    "on-secondary-container": "#626567",
+                    "primary": "#004cca",
+                    "on-secondary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed": "#191c1e",
+                    "error": "#ba1a1a",
+                    "surface": "#faf8ff",
+                    "secondary-fixed": "#e0e3e5",
+                    "surface-container-high": "#e2e7ff",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "inverse-surface": "#283044",
+                    "surface-variant": "#dae2fd",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-container": "#f5f2ff",
+                    "tertiary-fixed-dim": "#c0c1ff",
+                    "on-error": "#ffffff",
+                    "surface-container": "#eaedff",
+                    "secondary-container": "#e0e3e5",
+                    "on-primary": "#ffffff",
+                    "background": "#faf8ff",
+                    "on-tertiary-fixed": "#07006c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "margin-mobile": "16px",
+                    "lg": "40px",
+                    "sm": "12px",
+                    "xl": "64px",
+                    "xs": "4px",
+                    "base": "8px",
+                    "margin-desktop": "32px",
+                    "md": "24px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Hanken Grotesk"],
+                    "body-lg": ["Inter"],
+                    "label-sm": ["Geist"],
+                    "body-md": ["Inter"],
+                    "display-lg-mobile": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg-mobile": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+        .gradient-bg {
+            background: radial-gradient(circle at 0% 0%, #f2f3ff 0%, #faf8ff 100%);
+        }
+        .pulse-soft {
+            animation: pulse-soft 3s infinite ease-in-out;
+        }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- Navigation Shell -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 px-6 md:px-12 h-16 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-display-lg text-headline-md font-black text-primary">BotMind AI</span>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-on-surface-variant hover:text-primary font-medium transition-colors" href="#como-funciona">Cómo funciona</a>
+<a class="text-on-surface-variant hover:text-primary font-medium transition-colors" href="#beneficios">Beneficios</a>
+<a class="text-on-surface-variant hover:text-primary font-medium transition-colors" href="#precios">Precios</a>
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-full font-bold hover:opacity-90 transition-all shadow-sm active:scale-95">Empieza Gratis</button>
+</nav>
+<button class="md:hidden text-primary">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+</header>
+<main class="pt-16">
+<!-- Hero Section -->
+<section class="relative min-h-[921px] flex items-center justify-center px-6 md:px-12 overflow-hidden gradient-bg">
+<!-- Decorative Elements -->
+<div class="absolute top-20 right-[-10%] w-96 h-96 bg-primary-container/10 rounded-full blur-3xl"></div>
+<div class="absolute bottom-10 left-[-5%] w-72 h-72 bg-tertiary-container/10 rounded-full blur-3xl"></div>
+<div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center relative z-10">
+<div class="text-left space-y-6">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-container/20 text-primary border border-primary/20">
+<span class="material-symbols-outlined text-[18px]" data-icon="auto_awesome" data-weight="fill">auto_awesome</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider">Nueva Era de Automatización</span>
+</div>
+<h1 class="font-display-lg text-display-lg-mobile md:text-display-lg leading-[1.1] text-on-background">
+                        Crea tu Bot de <span class="text-primary">WhatsApp</span> con el poder de la IA
+                    </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg">
+                        Solo describe tu idea y nuestra IA se encarga del resto. Sin código, sin complicaciones, y listo en minutos para atender a tus clientes.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4 pt-4">
+<button class="bg-primary text-on-primary px-10 py-4 rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-[0.98]">
+                            Empieza Gratis
+                        </button>
+<button class="flex items-center justify-center gap-2 bg-white border border-outline-variant px-8 py-4 rounded-xl font-bold text-lg hover:bg-surface-container-low transition-all">
+<span class="material-symbols-outlined" data-icon="play_circle">play_circle</span>
+                            Ver demo
+                        </button>
+</div>
+<div class="flex items-center gap-4 pt-6 text-on-surface-variant">
+<div class="flex -space-x-3">
+<img alt="User 1" class="w-10 h-10 rounded-full border-2 border-white" data-alt="A professional close-up portrait of a diverse female executive in a modern office environment. The lighting is soft and natural, emphasizing a high-end corporate aesthetic with clean lines and soft blue tones in the background. The mood is confident and sophisticated, fitting a modern AI SaaS branding." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIrs7ZnF-Oc-pkkqVMSu0ipeaUW3MRoWNdFlyDH_MsOdxCgUfVPJbd4sJoi-LIIOP8bLI-92H5Qer9MDwXw8lgIDUp6cZ5grk3nC75yAj4Fy5w0el7riFRNJuZj-NZPsqLIqsg7BWVlgj6haL5BjEy3qDSZzJg_yKDwcOdW8ULkcNsfEaXsfGC5klDLbCrYHJtOPg_dUb-wCooPDMXtshQLWx-19A1a8B67k28TcyOamp8r92OgGLR0LMKlE3376HeAMusV6VnBftN"/>
+<img alt="User 2" class="w-10 h-10 rounded-full border-2 border-white" data-alt="A candid medium shot of a stylish young professional man with glasses working on a laptop in a bright, minimalist co-working space. The scene is illuminated by morning sunlight coming through large windows, creating a clean light-mode atmosphere. The color palette is neutral with soft primary blue accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9fAgJfaGoDQbOQUc45-eikAbvRhW-OQtg7Z1lhjgNY3yezY8spUuMo3QPfZcFYvFlJKCqaB209jm-dFukniru44HUYrjXvPmVnK0sHHpTl5VkSlH6pH47JB2eM_4C2wCgveNt6sRBSglkgLrOtA1DPfm3QnGiKB4QO4xAO6TpxRHKXA7_qefhjbLXkHmC7EAHaqO6PxJeAhACnUJ4q9K_P7KCE6gAY0LQn2vKkJAXb-i3f9KaxVD5Y4zwf18zyd98QBjT5Ws-2iu8"/>
+<img alt="User 3" class="w-10 h-10 rounded-full border-2 border-white" data-alt="A high-quality studio portrait of a mature male developer with a friendly smile, representing expertise and reliability. The lighting is bright and even, highlighting a modern tech-professional aesthetic. The background is a clean, out-of-focus tech office with subtle architectural details in light grey and white." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIhN0HmWN_g4hJxOlTKn80q9GhpwVwq0mWolVjXqjq7cwemrngtDdseUO_J_zANhu_c31R1bK3Vu-nOLKuhe5ARQEBIKlis3ulYKZ5W916m-sU-Hs-6p4ReemgnzF9OE7HunJfzT0LjUHyotkMw_17qKgxiGLy_VpyNDZAnZHaqHlwlKlPNLHEFluQOwIg-tq5gQF9m6vQx5OhZj91FRl2nm2xby8_2gtzzC6_X8-YHM4zJC393zX5dUNeSp5QSMtTw2WVfvJN4qAd"/>
+</div>
+<p class="font-label-sm text-label-sm">+2,000 bots creados este mes</p>
+</div>
+</div>
+<!-- Bento-style visual -->
+<div class="relative hidden md:block">
+<div class="grid grid-cols-12 gap-4">
+<div class="col-span-12 glass-card p-6 rounded-3xl shadow-xl pulse-soft transform -rotate-2">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+</div>
+<div>
+<h4 class="font-bold">Bot Inmobiliario Pro</h4>
+<p class="text-xs text-green-600 flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                        En línea 24/7
+                                    </p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="bg-surface-container rounded-lg p-3 text-sm max-w-[80%]">Hola! Estoy interesado en un departamento en Madrid.</div>
+<div class="bg-primary text-white rounded-lg p-3 text-sm max-w-[80%] ml-auto">¡Perfecto! Tengo 3 opciones ideales. ¿Buscas con terraza?</div>
+</div>
+</div>
+<div class="col-span-6 bg-white border border-outline-variant p-4 rounded-3xl mt-4">
+<div class="text-primary font-bold text-3xl mb-1">98%</div>
+<p class="text-xs text-on-surface-variant">Precisión en respuestas</p>
+</div>
+<div class="col-span-6 bg-primary-container text-on-primary-container p-4 rounded-3xl mt-4">
+<div class="material-symbols-outlined text-3xl mb-1" data-icon="bolt">bolt</div>
+<p class="text-xs">Listo en &lt; 5 min</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Steps Section -->
+<section class="py-xl px-6 md:px-12 bg-white" id="como-funciona">
+<div class="max-w-7xl mx-auto">
+<div class="text-center mb-16">
+<h2 class="font-display-lg text-headline-md md:text-display-lg text-on-background mb-4">Cómo funciona</h2>
+<p class="font-body-md text-on-surface-variant max-w-2xl mx-auto">Nuestro proceso de creación es tan natural como hablar con un asistente humano.</p>
+</div>
+<div class="grid md:grid-cols-3 gap-8 relative">
+<!-- Connector line for desktop -->
+<div class="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-outline-variant/30 -z-10"></div>
+<!-- Step 1 -->
+<div class="flex flex-col items-center text-center space-y-6 group">
+<div class="w-20 h-20 rounded-2xl bg-surface-container-high flex items-center justify-center text-primary border border-outline-variant group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-md">
+<span class="material-symbols-outlined text-4xl" data-icon="edit_note">edit_note</span>
+</div>
+<div class="space-y-2">
+<h3 class="font-headline-md text-headline-md">1. Describe tu idea</h3>
+<p class="text-on-surface-variant">Escribe qué quieres que haga tu bot: vender, agendar citas o soporte técnico.</p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex flex-col items-center text-center space-y-6 group">
+<div class="w-20 h-20 rounded-2xl bg-surface-container-high flex items-center justify-center text-primary border border-outline-variant group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-md">
+<span class="material-symbols-outlined text-4xl" data-icon="forum">forum</span>
+</div>
+<div class="space-y-2">
+<h3 class="font-headline-md text-headline-md">2. La IA te pregunta</h3>
+<p class="text-on-surface-variant">Nuestra IA te hará un par de preguntas para pulir los detalles y el tono del bot.</p>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="flex flex-col items-center text-center space-y-6 group">
+<div class="w-20 h-20 rounded-2xl bg-surface-container-high flex items-center justify-center text-primary border border-outline-variant group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-md">
+<span class="material-symbols-outlined text-4xl" data-icon="rocket_launch">rocket_launch</span>
+</div>
+<div class="space-y-2">
+<h3 class="font-headline-md text-headline-md">3. ¡Listo para usar!</h3>
+<p class="text-on-surface-variant">Conectamos tu bot a WhatsApp y empieza a recibir mensajes de inmediato.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Benefits Section -->
+<section class="py-xl px-6 md:px-12 bg-surface-container-low overflow-hidden" id="beneficios">
+<div class="max-w-7xl mx-auto">
+<div class="grid md:grid-cols-2 gap-16 items-center">
+<div class="relative">
+<div class="aspect-square bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-outline-variant/50">
+<img alt="Support Team" class="w-full h-full object-cover" data-alt="A modern, high-tech workspace where a team of professionals is monitoring real-time data on large screens. The lighting is dominated by cool blue and clean white tones, reflecting a state-of-the-art AI command center. The atmosphere is energetic yet organized, showcasing the efficiency of automated systems in a corporate setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhDn9iZcpOmeEAwCnhygzyoE99PViKusDLDqYF0AqXW6B0B6Ywtt9Ctf9ABxzVhXvSpppZ7y5zBLlo8oaMXiqnez2UH7g1w6SgjhSPvHwmaxCEQDO7riSN5aY12uz-P9h5RxarJEuIzehP0YTv555XYyhtViqVpluidgRYWCUI05FCnkUru3XYoIIYK5GglyfVC3uuspLpNxUcZGFfN4Cu0NcvNXa9dMRJzq9ZbqX84kXRw4YhMQoCoHo4w7KohABFkrgkPlIZwXtO"/>
+</div>
+<div class="absolute -bottom-8 -right-8 bg-primary text-on-primary p-8 rounded-3xl shadow-xl max-w-xs hidden lg:block">
+<p class="font-bold text-xl mb-2">"BotMind redujo nuestro tiempo de respuesta en un 90%"</p>
+<span class="font-label-sm opacity-80">— Carlos R., CEO de InmoQuick</span>
+</div>
+</div>
+<div class="space-y-12">
+<h2 class="font-display-lg text-headline-md md:text-display-lg text-on-background">Diseñado para que tu negocio nunca duerma</h2>
+<div class="space-y-8">
+<!-- Benefit 1 -->
+<div class="flex gap-6">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-container/20 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+</div>
+<div class="space-y-1">
+<h4 class="font-bold text-xl">Ahorro de tiempo masivo</h4>
+<p class="text-on-surface-variant">Automatiza tareas repetitivas y deja que tu equipo se enfoque en cerrar ventas complejas.</p>
+</div>
+</div>
+<!-- Benefit 2 -->
+<div class="flex gap-6">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-container/20 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="history_toggle_off">history_toggle_off</span>
+</div>
+<div class="space-y-1">
+<h4 class="font-bold text-xl">Respuesta inmediata 24/7</h4>
+<p class="text-on-surface-variant">No pierdas un solo lead por falta de atención. Tus clientes recibirán respuestas en segundos.</p>
+</div>
+</div>
+<!-- Benefit 3 -->
+<div class="flex gap-6">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-container/20 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="integration_instructions">integration_instructions</span>
+</div>
+<div class="space-y-1">
+<h4 class="font-bold text-xl">Fácil integración</h4>
+<p class="text-on-surface-variant">Conéctate con tu CRM, Google Sheets o cualquier herramienta que ya uses de forma nativa.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA Section -->
+<section class="py-xl px-6 md:px-12">
+<div class="max-w-5xl mx-auto bg-inverse-surface text-inverse-on-surface p-12 md:p-24 rounded-[3rem] text-center space-y-8 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+<div class="grid grid-cols-6 gap-4 p-8 transform -rotate-12 scale-150">
+<div class="h-20 bg-white/20 rounded-xl"></div>
+<div class="h-20 bg-white/20 rounded-xl"></div>
+<div class="h-20 bg-white/20 rounded-xl"></div>
+<div class="h-20 bg-white/20 rounded-xl"></div>
+<div class="h-20 bg-white/20 rounded-xl"></div>
+<div class="h-20 bg-white/20 rounded-xl"></div>
+</div>
+</div>
+<div class="relative z-10 space-y-6">
+<h2 class="font-display-lg text-headline-md md:text-display-lg">¿Listo para transformar tu WhatsApp?</h2>
+<p class="font-body-lg text-lg text-surface-variant/80 max-w-2xl mx-auto">
+                        Únete a miles de empresas que ya están escalando sus ventas con IA. No requiere tarjeta de crédito.
+                    </p>
+<div class="pt-6">
+<button class="bg-primary text-on-primary px-12 py-5 rounded-2xl font-bold text-xl hover:scale-105 transition-all shadow-xl shadow-primary/30">
+                            Empieza Gratis Ahora
+                        </button>
+</div>
+<p class="font-label-sm text-label-sm text-surface-variant/60">Configuración en menos de 5 minutos</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface py-16 px-6 md:px-12 border-t border-outline-variant/30">
+<div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-12">
+<div class="col-span-1 md:col-span-1 space-y-6">
+<span class="font-display-lg text-headline-md font-black text-primary">BotMind AI</span>
+<p class="text-on-surface-variant font-body-md">Potenciando negocios con inteligencia artificial conversacional.</p>
+<div class="flex gap-4">
+<a class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary-container/10 transition-colors" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="language">language</span>
+</a>
+<a class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary-container/10 transition-colors" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="share">share</span>
+</a>
+</div>
+</div>
+<div>
+<h5 class="font-bold mb-6">Producto</h5>
+<ul class="space-y-4 text-on-surface-variant">
+<li><a class="hover:text-primary transition-colors" href="#">Funcionalidades</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Integraciones</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Precios</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Casos de éxito</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold mb-6">Recursos</h5>
+<ul class="space-y-4 text-on-surface-variant">
+<li><a class="hover:text-primary transition-colors" href="#">Blog</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Documentación</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Soporte</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">API</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold mb-6">Legal</h5>
+<ul class="space-y-4 text-on-surface-variant">
+<li><a class="hover:text-primary transition-colors" href="#">Privacidad</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Términos</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Cookies</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-7xl mx-auto mt-16 pt-8 border-t border-outline-variant/30 flex flex-col md:row justify-between items-center gap-4">
+<p class="text-on-surface-variant text-sm">© 2024 BotMind AI. Todos los derechos reservados.</p>
+<div class="flex items-center gap-2 text-sm text-on-surface-variant">
+<span>Hecho con</span>
+<span class="material-symbols-outlined text-error text-xs" data-icon="favorite" data-weight="fill">favorite</span>
+<span>para el mundo</span>
+</div>
+</div>
+</footer>
+<script>
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Simple scroll reveal
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section');
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top < window.innerHeight * 0.8) {
+                    section.classList.add('opacity-100');
+                }
+            });
+        });
+    </script>
+</body></html>
