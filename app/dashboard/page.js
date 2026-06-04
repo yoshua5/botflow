@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 const BLUE = "#2563EB";
 const BLUE_LIGHT = "#EFF6FF";
@@ -7,55 +8,108 @@ const BLUE_MID = "#DBEAFE";
 const TEXT = "#0F172A";
 const MUTED = "#64748B";
 const WHITE = "#FFFFFF";
+const GREEN = "#10B981";
 
-function StatCard({ icon, label, value, sub }) {
+function StatCard({ icon, label, value, sub, trend }) {
   return (
     <div style={{
-      background: WHITE, borderRadius: 16, padding: "20px 22px",
-      border: "1.5px solid #E2E8F0", boxShadow: "0 1px 6px rgba(0,0,0,0.04)", transition: "all 0.2s",
+      background: WHITE,
+      borderRadius: 12,
+      padding: "20px",
+      border: "1px solid #E5E7EB",
+      transition: "all 0.3s ease",
     }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 24px rgba(37,99,235,0.1)"; e.currentTarget.style.borderColor = "#93C5FD"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 6px rgba(0,0,0,0.04)"; e.currentTarget.style.borderColor = "#E2E8F0"; }}>
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: BLUE_MID, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{icon}</div>
+      onMouseEnter={e => {
+        e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
+        e.currentTarget.style.transform = "translateY(-2px)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = "none";
+        e.currentTarget.style.transform = "translateY(0)";
+      }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 10, background: BLUE_LIGHT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+          {icon}
+        </div>
+        {trend && (
+          <div style={{ fontSize: 12, fontWeight: 600, color: trend > 0 ? GREEN : "#EF4444", background: trend > 0 ? "#F0FDF4" : "#FEF2F2", padding: "4px 8px", borderRadius: 6 }}>
+            {trend > 0 ? "+" : ""}{trend}%
+          </div>
+        )}
       </div>
-      <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 30, fontWeight: 900, color: TEXT, letterSpacing: "-0.02em" }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>{sub}</div>}
+      <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 32, fontWeight: 900, color: TEXT, letterSpacing: "-0.02em" }}>
+        {value}
+      </div>
+      {sub && <div style={{ fontSize: 13, color: MUTED, marginTop: 6 }}>{sub}</div>}
     </div>
   );
 }
 
 function BotCard({ bot }) {
-  const isActive = bot.status === "ACTIVO";
-  const initials = (bot.agentName || bot.name || "B").slice(0, 2).toUpperCase();
   return (
-    <div style={{
-      background: WHITE, borderRadius: 16, padding: "18px 20px",
-      border: "1.5px solid #E2E8F0", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-      display: "flex", alignItems: "center", gap: 14, transition: "all 0.2s",
-    }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(37,99,235,0.1)"; e.currentTarget.style.borderColor = "#93C5FD"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.borderColor = "#E2E8F0"; }}>
-      <div style={{ width: 52, height: 52, borderRadius: 14, background: BLUE_MID, border: "1px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: BLUE, flexShrink: 0 }}>
-        {initials}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bot.agentName || bot.name}</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
-            padding: "2px 8px", borderRadius: 100,
-            background: isActive ? "#F0FDF4" : "#F1F5F9",
-            color: isActive ? "#16A34A" : "#94A3B8", flexShrink: 0,
-          }}>● {bot.status}</span>
+    <Link href={`/dashboard/bots/${bot.id}`} style={{ textDecoration: "none" }}>
+      <div style={{
+        background: WHITE,
+        borderRadius: 12,
+        padding: "20px",
+        border: "1px solid #E5E7EB",
+        cursor: "pointer",
+        transition: "all 0.3s ease",
+      }}
+        onMouseEnter={e => {
+          e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
+          e.currentTarget.style.transform = "translateY(-2px)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.boxShadow = "none";
+          e.currentTarget.style.transform = "translateY(0)";
+        }}>
+        {/* Header with Badge */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 4 }}>
+              {bot.agentName || bot.name}
+            </div>
+            <div style={{ fontSize: 13, color: MUTED }}>
+              {bot.businessName || "Mi negocio"}
+            </div>
+          </div>
+
+          {/* Status Badge */}
+          <div style={{
+            fontSize: 11,
+            fontWeight: 700,
+            padding: "4px 10px",
+            borderRadius: 6,
+            background: bot.status === "ACTIVO" ? "#F0FDF4" : "#FEF2F2",
+            color: bot.status === "ACTIVO" ? GREEN : "#EF4444",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}>
+            {bot.status === "ACTIVO" ? "Activo" : "Inactivo"}
+          </div>
         </div>
-        <p style={{ fontSize: 13, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {bot.businessName} · {(bot.messageCount || 0)} mensajes
-        </p>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
+              {(bot.messageCount || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: 11, color: MUTED }}>Mensajes</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
+              {(bot.conversationCount || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: 11, color: MUTED }}>Conversaciones</div>
+          </div>
+        </div>
       </div>
-      <a href="/dashboard/settings" style={{ padding: "6px 14px", background: BLUE_LIGHT, borderRadius: 8, fontSize: 12, fontWeight: 700, color: BLUE, textDecoration: "none", flexShrink: 0 }}>Gestionar</a>
-    </div>
+    </Link>
   );
 }
 
@@ -76,59 +130,121 @@ export default function DashboardPage() {
   }, []);
 
   const activeCount = bots.filter(b => b.status === "ACTIVO").length;
+  const connectedCount = bots.filter(b => b.phoneNumberId).length;
   const totalMessages = analytics?.totalMessages || 0;
   const totalConversations = analytics?.totalConversations || 0;
-  const today = new Date().toISOString().slice(0, 10);
-  const todayMessages = analytics?.dailyCounts?.[today] || 0;
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
-        <div>
-          <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, letterSpacing: "-0.03em", marginBottom: 4 }}>Dashboard</h1>
-          <p style={{ fontSize: 15, color: MUTED }}>Bienvenido a Botflow — todos tus bots en un solo lugar</p>
+    <div style={{ padding: "40px 0" }}>
+      {/* Hero Section */}
+      <div style={{
+        background: `linear-gradient(135deg, ${BLUE} 0%, #1E40AF 100%)`,
+        borderRadius: 16,
+        padding: "48px 40px",
+        color: WHITE,
+        marginBottom: 48,
+      }}>
+        <div style={{ maxWidth: 600 }}>
+          <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 12, letterSpacing: "-0.02em" }}>
+            Bienvenido a Botflow
+          </h1>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,0.9)", marginBottom: 28, lineHeight: 1.6 }}>
+            Gestiona todos tus bots de WhatsApp en un solo lugar. Crea, configura y monitorea agentes de IA en minutos.
+          </p>
+          <Link href="/dashboard/create-improved">
+            <button style={{
+              padding: "12px 28px",
+              background: WHITE,
+              color: BLUE,
+              border: "none",
+              borderRadius: 8,
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = "scale(1.05)";
+                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.2)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = "none";
+              }}>
+              <span>+</span> Crear nuevo bot
+            </button>
+          </Link>
         </div>
-        <a href="/dashboard/create" style={{
-          padding: "10px 20px", background: BLUE, borderRadius: 10, fontSize: 14,
-          fontWeight: 700, color: WHITE, textDecoration: "none",
-          boxShadow: "0 2px 8px rgba(37,99,235,0.3)", display: "flex", alignItems: "center", gap: 6,
-        }}
-          onMouseEnter={e => e.currentTarget.style.background = "#1D4ED8"}
-          onMouseLeave={e => e.currentTarget.style.background = BLUE}>
-          <span style={{ fontSize: 18 }}>+</span> Nuevo Bot
-        </a>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 28 }}>
-        <StatCard icon="🤖" label="Bots totales" value={loading ? "..." : bots.length.toString()} sub={`${activeCount} activos`} />
-        <StatCard icon="💬" label="Mensajes totales" value={loading ? "..." : totalMessages.toLocaleString()} sub="desde siempre" />
-        <StatCard icon="👥" label="Conversaciones" value={loading ? "..." : totalConversations.toLocaleString()} sub="únicas" />
-        <StatCard icon="📅" label="Mensajes hoy" value={loading ? "..." : todayMessages.toLocaleString()} sub={today} />
+      {/* Stats Grid */}
+      <div style={{ marginBottom: 48 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: TEXT, marginBottom: 20 }}>
+          Tu actividad
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
+          <StatCard icon="🤖" label="Bots Activos" value={activeCount} sub={`de ${bots.length} total`} />
+          <StatCard icon="💬" label="Mensajes" value={totalMessages.toLocaleString()} sub="Todos los tiempos" />
+          <StatCard icon="👥" label="Conversaciones" value={totalConversations.toLocaleString()} sub="Únicas" />
+          <StatCard icon="📱" label="Conectados" value={connectedCount} sub="100% de cobertura" />
+        </div>
       </div>
 
-      {/* Bots grid */}
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>Tus Bots</h2>
-          <a href="/dashboard/bots" style={{ fontSize: 13, fontWeight: 600, color: BLUE, textDecoration: "none" }}>Ver todos →</a>
-        </div>
-
+      {/* Bots Section */}
+      <div>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: TEXT, marginBottom: 20 }}>
+          Tus bots
+        </h2>
         {loading ? (
-          <div style={{ padding: "32px", textAlign: "center", color: MUTED, background: WHITE, borderRadius: 14, border: "1.5px solid #E2E8F0" }}>
-            Cargando...
+          <div style={{ textAlign: "center", padding: "40px 20px", color: MUTED }}>
+            Cargando bots...
           </div>
         ) : bots.length === 0 ? (
-          <div style={{ padding: "48px 24px", textAlign: "center", background: WHITE, borderRadius: 16, border: "1.5px dashed #E2E8F0" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🤖</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: TEXT, marginBottom: 8 }}>Aún no tienes bots</div>
-            <p style={{ color: MUTED, marginBottom: 20 }}>Crea tu primer agente de WhatsApp en minutos.</p>
-            <a href="/dashboard/create" style={{ padding: "10px 22px", background: BLUE, borderRadius: 10, fontSize: 14, fontWeight: 700, color: WHITE, textDecoration: "none" }}>+ Crear mi primer bot</a>
+          <div style={{
+            background: BLUE_LIGHT,
+            borderRadius: 12,
+            padding: "40px 20px",
+            textAlign: "center",
+            border: `2px dashed ${BLUE}`,
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 12 }}>
+              No tienes bots creados aún
+            </div>
+            <div style={{ fontSize: 14, color: MUTED, marginBottom: 20 }}>
+              Crea tu primer bot para comenzar a gestionar tus agentes de WhatsApp
+            </div>
+            <Link href="/dashboard/create-improved">
+              <button style={{
+                padding: "10px 24px",
+                background: BLUE,
+                color: WHITE,
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+              }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.opacity = "0.9";
+                  e.currentTarget.style.transform = "scale(1.05)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.opacity = "1";
+                  e.currentTarget.style.transform = "scale(1)";
+                }}>
+                + Crear Bot
+              </button>
+            </Link>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
-            {bots.slice(0, 6).map(bot => <BotCard key={bot.id} bot={bot} />)}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
+            {bots.map(bot => (
+              <BotCard key={bot.id} bot={bot} />
+            ))}
           </div>
         )}
       </div>
