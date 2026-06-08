@@ -940,4 +940,8 @@ export default function CitasPage() {
       ) : tab === "agenda" ? (
         <TabAgenda aptConfig={aptConfig} />
       ) : (
-        <TabConfig config={config} onSaved={loadConfig}
+        <TabConfig config={config} onSaved={loadConfig} />
+      )}
+    </div>
+  );
+}
