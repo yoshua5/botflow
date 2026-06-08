@@ -11,18 +11,19 @@ export async function GET(request) {
   const token     = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  const verifyToken = process.env.WA_VERIFY_TOKEN;
+  // Accept either WA_VERIFY_TOKEN or WEBHOOK_SECRET as the verify token
+  const verifyToken = process.env.WA_VERIFY_TOKEN || process.env.WEBHOOK_SECRET;
   if (!verifyToken) {
-    console.error("❌ WA_VERIFY_TOKEN is not set in env vars. Webhook verification will always fail.");
+    console.error("❌ No verify token set. Add WA_VERIFY_TOKEN to env vars.");
     return new Response("Server misconfiguration", { status: 500 });
   }
 
-  const headers = { "ngrok-skip-browser-warning": "true", "Content-Type": "text/plain" };
+  const headers = { "Content-Type": "text/plain" };
   if (mode === "subscribe" && token === verifyToken) {
     console.log("✅ Webhook verificado");
     return new Response(challenge, { status: 200, headers });
   }
-  console.warn(`⚠️  Webhook verification failed. mode=${mode}, token_match=${token === verifyToken}`);
+  console.warn(`⚠️ Webhook verification failed. mode=${mode}, expected=${verifyToken}, got=${token}`);
   return new Response("Token incorrecto", { status: 403, headers });
 }
 
