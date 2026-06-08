@@ -78,4 +78,57 @@ export async function POST(request) {
       } catch { /* ignore */ }
     }
 
-    if (!res.
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status} ${res.statusText}`);
+    }
+
+    // Limit response size to 2MB
+    const contentLength = parseInt(res.headers.get("content-length") || "0");
+    if (contentLength > 2 * 1024 * 1024) {
+      return NextResponse.json({ error: "Pagina demasiado grande" }, { status: 400 });
+    }
+    const html = await res.text();
+    if (html.length > 2 * 1024 * 1024) {
+      return NextResponse.json({ error: "Pagina demasiado grande" }, { status: 400 });
+    }
+
+    const $ = cheerio.load(html);
+    $("script, style, noscript, svg, iframe").remove();
+    const title = $("title").text().trim();
+    const description = $("meta[name='description']").attr("content") || "";
+    let text = $("body").text().replace(/\s+/g, " ").trim();
+    if (!text) throw new Error("No se pudo extraer texto util del sitio web");
+
+    const finalContent = `=== SITIO WEB: ${title || targetUrl} ===\nURL: ${targetUrl}\nDescripcion: ${description}\n\nCONTENIDO:\n${text}`;
+    const filename = targetUrl.replace(/^https?:\/\//i, "").split("/")[0] + ".txt";
+    const id = `${Date.now()}-website`;
+
+    const entry = {
+      id, name: filename, type: "Sitio Web",
+      size: `${Math.round(finalContent.length / 1024)} KB`,
+      date: new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }),
+      status: "PROCESANDO", textFile: null,
+    };
+
+    const index = await getKBIndex(userId);
+    index.unshift(entry);
+    await setKBIndex(index, userId);
+
+    const textFile = `${id}.txt`;
+    await setKBText(textFile, finalContent, userId);
+
+    const updatedIndex = await getKBIndex(userId);
+    const idx = updatedIndex.findIndex(f => f.id === id);
+    if (idx !== -1) {
+      updatedIndex[idx].status = "PROCESADO";
+      updatedIndex[idx].textFile = textFile;
+      updatedIndex[idx].preview = text.slice(0, 200).trim();
+      await setKBIndex(updatedIndex, userId);
+    }
+
+    return NextResponse.json({ success: true, file: entry });
+  } catch (err) {
+    console.error("Scrape error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

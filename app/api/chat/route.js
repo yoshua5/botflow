@@ -11,54 +11,37 @@ export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
-
-    // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized — must be logged in" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { message } = await request.json();
     if (!message) return NextResponse.json({ error: "No message" }, { status: 400 });
 
-    const config    = await getConfig();
-    const knowledge = await getAllKBText();
+    const config    = await getConfig(userId);
+    const knowledge = await getAllKBText(userId);
 
     if (!config.anthropicKey) {
-      return NextResponse.json({ reply: "⚠️ Configura tu Anthropic API Key en Settings → WhatsApp." });
+      return NextResponse.json({ reply: "Configura tu Anthropic API Key en Settings." });
     }
 
     const agentName    = config.agentName    || "Asistente";
     const businessName = config.businessName || "tu negocio";
     const tone         = config.tone         || "amigable";
-
     const toneMap = {
       amigable: "amigable y cercano", profesional: "profesional y formal",
-      energético: "energético y entusiasta", empático: "empático y cálido",
+      energetico: "energetico y entusiasta", empatico: "empatico y calido",
       directo: "directo y conciso",
     };
 
     let system = `Eres ${agentName}, el asistente virtual de ${businessName}. Tono: ${toneMap[tone] || tone}.`;
-    if (config.businessDesc)    system += `\nDescripción: ${config.businessDesc}`;
-    if (config.businessProfile) system += `\nPerfil: ${config.businessProfile}`;
+    if (config.businessDesc)    system += `\nDescripcion: ${config.businessDesc}`;
     if (config.services)        system += `\nServicios: ${config.services}`;
     if (config.hours)           system += `\nHorario: ${config.hours}`;
-    if (config.location)        system += `\nUbicación: ${config.location}`;
-    if (config.pricePolicy)     system += `\nPrecios: ${config.pricePolicy}`;
+    if (config.location)        system += `\nUbicacion: ${config.location}`;
     if (config.greeting)        system += `\nSaludo: "${config.greeting}"`;
-
-    if (config.catalog?.length) {
-      system += "\n\nCATÁLOGO:";
-      config.catalog.filter(c => c.name).forEach(c => {
-        system += `\n• ${c.name}${c.price ? ` — ${c.price}` : ""}${c.description ? `: ${c.description}` : ""}`;
-      });
-    }
-
     if (knowledge) system += `\n\nBASE DE CONOCIMIENTOS:\n${knowledge.slice(0, 30000)}`;
-
-    system += "\nResponde de forma natural y breve (máximo 4 oraciones). Esto es un chat de prueba desde el panel de administración.";
+    system += "\nResponde de forma natural y breve (maximo 4 oraciones). Esto es un chat de prueba.";
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -76,4 +59,10 @@ export async function POST(request) {
     });
 
     const data = await res.json();
-    const reply = data.conten
+    const reply = data.content?.[0]?.text || "Hola, en que te puedo ayudar?";
+    return NextResponse.json({ reply });
+  } catch (err) {
+    console.error("Chat error:", err.message);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

@@ -29,4 +29,6 @@ export async function POST(request) {
     return NextResponse.json({ url: portalSession.url });
   } catch (err) {
     console.error("Stripe portal error:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 50
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

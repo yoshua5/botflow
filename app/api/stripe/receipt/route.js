@@ -155,4 +155,3 @@ export async function GET() {
     return new NextResponse("Error generando recibo: " + err.message, { status: 500 });
   }
 }
-                                                                                                            

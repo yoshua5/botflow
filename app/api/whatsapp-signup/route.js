@@ -115,4 +115,6 @@ export async function POST(req) {
 
   } catch (err) {
     console.error("WhatsApp signup error:", err);
-    return NextResponse.json({ error: err.message }
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

@@ -224,4 +224,13 @@ export async function GET() {
 
     const q = QUESTIONS[0];
     return NextResponse.json({
-      question: q
+      question: q.text,
+      hint: q.hint,
+      step: 0,
+      totalSteps: QUESTIONS.length,
+    });
+  } catch (err) {
+    console.error("create-bot GET error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

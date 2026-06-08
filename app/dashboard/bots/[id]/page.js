@@ -861,4 +861,38 @@ export default function BotSettingsPage() {
               }}>
                 <span style={{ fontSize: 16 }}>{tab.icon}</span>
                 {tab.label}
-              </button
+              </button>
+            ))}
+          </div>
+
+          {/* Stats */}
+          <div style={{ background: WHITE, border: "1.5px solid #E2E8F0", borderRadius: 14, padding: "16px", marginTop: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>
+              ESTADÍSTICAS
+            </div>
+            {[
+              { label: "Mensajes", value: bot.messageCount || 0 },
+              { label: "Conversaciones", value: bot.conversationCount || 0 },
+              { label: "Creado", value: bot.createdAt ? new Date(bot.createdAt).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) : "hoy" },
+            ].map(s => (
+              <div key={s.label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F8FAFF" }}>
+                <span style={{ fontSize: 13, color: MUTED }}>{s.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{s.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div style={{ flex: 1, minWidth: 0, background: WHITE, border: "1.5px solid #E2E8F0", borderRadius: 14, padding: "28px", overflow: "auto" }}>
+          {activeTab === "general"    && <TabGeneral    bot={bot} setBot={setBot} />}
+          {activeTab === "negocio"    && <TabNegocio    bot={bot} setBot={setBot} />}
+          {activeTab === "whatsapp"   && <TabWhatsApp   bot={bot} setBot={setBot} autoConnect={activeTab === "whatsapp" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("connect") === "1"} />}
+          {activeTab === "flujo"      && <TabFlujo      bot={bot} setBot={setBot} />}
+          {activeTab === "respuestas" && <TabRespuestas bot={bot} setBot={setBot} />}
+          {activeTab === "avanzado"   && <TabAvanzado   bot={bot} setBot={setBot} />}
+        </div>
+      </div>
+    </div>
+  );
+}
