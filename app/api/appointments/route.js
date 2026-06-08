@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { getConfig } from "@/lib/storage";
 import { getSheetRows, deleteSheetRow, updateSheetCell, setupSheetHeaders } from "@/lib/google";
 import { bookAppointment } from "@/lib/bookAppointment";

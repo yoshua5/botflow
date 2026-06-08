@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import Stripe from "stripe";
 import { getSubscription } from "@/lib/storage";
 
@@ -29,6 +29,4 @@ export async function POST(request) {
     return NextResponse.json({ url: portalSession.url });
   } catch (err) {
     console.error("Stripe portal error:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return NextResponse.json({ error: err.message }, { status: 50

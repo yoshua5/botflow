@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { getBots, setBots, setPhoneMapping, getConfig, setConfig } from "@/lib/storage";
 
 export async function POST(req) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { getKBIndex, setKBIndex, setKBText } from "@/lib/storage";
 import { rateLimitRoute } from "@/lib/rateLimit";
 import * as cheerio from "cheerio";
