@@ -10,13 +10,12 @@ export async function GET() {
     const userId = session?.user?.id;
     if (!userId) return new NextResponse("No autenticado", { status: 401 });
 
-    // currentUser replaced with NextAuth session
     const sub  = await getSubscription(userId);
     if (!sub || sub.plan === "free") return new NextResponse("Sin suscripción activa", { status: 404 });
 
     const plan     = getPlanById(sub.planId || "starter");
-    const name     = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Cliente";
-    const email    = user?.emailAddresses?.[0]?.emailAddress || "";
+    const name     = session?.user?.name  || "Cliente";
+    const email    = session?.user?.email || "";
     const amount   = sub.lastInvoiceAmount ?? sub.amount ?? plan.price;
     const date     = sub.lastInvoiceDate
       ? new Date(sub.lastInvoiceDate).toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" })
