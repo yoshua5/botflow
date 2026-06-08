@@ -29,3 +29,9 @@ push-final.cmd
 push.py 
 push.ps1 
 run-push.cmd 
+tsconfig.tsbuildinfo
+
+.vercel
+.env*
+botflow.env
+add-vercel-env.bat

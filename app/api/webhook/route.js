@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { getUserIdByPhone, getBotIdByPhone, getPhoneMappingHmac, getConfig, getBots, getAllKBText, getKBImages, getKBImageData, trackMessage, getConversation, setConversation } from "@/lib/storage";
 import { verifyMetaSignature, verifyOwnershipHmac } from "@/lib/webhookAuth";
-import { getAvailableSlots } from "@/lib/google";
-import { bookAppointment } from "@/lib/bookAppointment";
+
+// Lazy imports — loaded only when POST handler actually needs them.
+// This ensures the GET (webhook verification) handler works even if
+// Google/booking modules fail to initialize (e.g. missing credentials).
+async function getAvailableSlots(...args) {
+  const { getAvailableSlots: fn } = await import("@/lib/google");
+  return fn(...args);
+}
+async function bookAppointment(...args) {
+  const { bookAppointment: fn } = await import("@/lib/bookAppointment");
+  return fn(...args);
+}
 
 // ── GET: WhatsApp webhook verification ───────────────────────
 export async function GET(request) {
