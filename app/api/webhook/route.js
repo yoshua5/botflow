@@ -57,7 +57,8 @@ export async function POST(request) {
   }
 
   try {
-    const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const message     = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const contactName = body.entry?.[0]?.changes?.[0]?.value?.contacts?.[0]?.profile?.name || null;
 
     // Accept text, audio, and interactive (button/list clicks)
     const isText        = message?.type === "text";
@@ -275,7 +276,7 @@ export async function POST(request) {
 
     const botName = config.agentName || config.businessName || "Bot";
     const trackText = isAudio ? `🎤 ${text}` : text;
-    trackMessage(from, trackText, botName, userId).catch(() => {});
+    trackMessage(from, trackText, botName, userId, activeBot?.id || null, contactName).catch(() => {});
     return NextResponse.json({ status: "ok" });
   } catch (err) {
     console.error("Webhook error:", err);
@@ -633,9 +634,4 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
     });
     if (!sendRes.ok) {
       const errData = await sendRes.json();
-      console.error("❌ Error sending image:", JSON.stringify(errData));
-    }
-  } catch (err) {
-    console.error("❌ sendWhatsAppImage error:", err.message);
-  }
-}
+      console.error("❌ Err

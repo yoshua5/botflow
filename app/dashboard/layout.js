@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { icon: "🤖", label: "My Bots",      href: "/dashboard/bots" },
   { icon: "📊", label: "Analytics",    href: "/dashboard/analytics" },
   { icon: "📚", label: "Conocimientos",href: "/dashboard/knowledge" },
+  { icon: "👥", label: "Contactos",    href: "/dashboard/contactos" },
 ];
 
 function Sidebar({ collapsed }) {
@@ -418,6 +419,4 @@ export default function DashboardLayout({ children }) {
       </div>
       <ChatWidget />
     </div>
-  );
-}
-                                                                     
+  )
