@@ -137,7 +137,7 @@ export async function GET() {
       );
     }
 
-    const index = await getKBIndex();
+    const index = await getKBIndex(userId);
     return NextResponse.json({ files: index });
   } catch (err) {
     console.error("GET /api/knowledge error:", err);
@@ -170,7 +170,7 @@ export async function POST(request) {
     const id       = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const botId    = formData.get("botId") || null;
 
-    await saveRawFile(id, buffer);
+    await saveRawFile(id, buffer, userId);
 
     const isImage = mimeType.startsWith("image/");
 
@@ -187,38 +187,38 @@ export async function POST(request) {
       ...(botId ? { botId } : {}),
     };
 
-    const index = await getKBIndex();
+    const index = await getKBIndex(userId);
     index.unshift(entry);
-    await setKBIndex(index);
+    await setKBIndex(index, userId);
 
-    const config = await getConfig();
+    const config = await getConfig(userId);
 
     if (isImage) {
       // Save image binary data immediately so the bot can send it via WhatsApp
       const base64 = buffer.toString("base64");
-      await setKBImageData(id, { base64, mimeType, filename });
+      await setKBImageData(id, { base64, mimeType, filename }, userId);
       console.log(`🖼️ Imagen guardada en storage: ${filename}`);
 
       // Mark as PROCESADO right away — images don't need OCR to be sendable
-      const idx0 = await getKBIndex();
+      const idx0 = await getKBIndex(userId);
       const i0   = idx0.findIndex(f => f.id === id);
       if (i0 !== -1) {
         idx0[i0].status  = "PROCESADO";
         idx0[i0].preview = `[Imagen: ${filename}]`;
-        await setKBIndex(idx0);
+        await setKBIndex(idx0, userId);
       }
 
       // Run OCR in background to also extract text (best-effort)
       extractTextFromBuffer(buffer, mimeType, filename, config.anthropicKey).then(async (text) => {
         if (text && text.trim().length > 0) {
           const textFile = `${id}.txt`;
-          await setKBText(textFile, `=== ${filename} ===\n\n${text}`);
-          const idx2 = await getKBIndex();
+          await setKBText(textFile, `=== ${filename} ===\n\n${text}`, userId);
+          const idx2 = await getKBIndex(userId);
           const i2   = idx2.findIndex(f => f.id === id);
           if (i2 !== -1) {
             idx2[i2].textFile = textFile;
             idx2[i2].preview  = text.slice(0, 200).trim();
-            await setKBIndex(idx2);
+            await setKBIndex(idx2, userId);
           }
           console.log(`✅ OCR imagen OK: ${filename} — ${text.length} chars`);
         }
@@ -228,12 +228,12 @@ export async function POST(request) {
       console.log(`📄 Extrayendo texto de: ${filename} (${mimeType})`);
 
       extractTextFromBuffer(buffer, mimeType, filename, config.anthropicKey).then(async (text) => {
-        const idx = await getKBIndex();
+        const idx = await getKBIndex(userId);
         const i   = idx.findIndex(f => f.id === id);
         if (i !== -1) {
           if (text && text.trim().length > 0) {
             const textFile = `${id}.txt`;
-            await setKBText(textFile, `=== ${filename} ===\n\n${text}`);
+            await setKBText(textFile, `=== ${filename} ===\n\n${text}`, userId);
             idx[i].status   = "PROCESADO";
             idx[i].textFile = textFile;
             idx[i].preview  = text.slice(0, 200).trim();
@@ -242,13 +242,13 @@ export async function POST(request) {
             idx[i].status = "ERROR";
             console.error(`❌ Sin texto extraído para: ${filename}`);
           }
-          await setKBIndex(idx);
+          await setKBIndex(idx, userId);
         }
       }).catch(async (err) => {
         console.error(`❌ Error extrayendo ${filename}:`, err.message);
-        const idx = await getKBIndex();
+        const idx = await getKBIndex(userId);
         const i   = idx.findIndex(f => f.id === id);
-        if (i !== -1) { idx[i].status = "ERROR"; await setKBIndex(idx); }
+        if (i !== -1) { idx[i].status = "ERROR"; await setKBIndex(idx, userId); }
       });
     }
 
@@ -276,12 +276,12 @@ export async function PATCH(request) {
     const { id, description } = await request.json();
     if (!id) return NextResponse.json({ error: "No id" }, { status: 400 });
 
-    const index = await getKBIndex();
+    const index = await getKBIndex(userId);
     const i = index.findIndex(f => f.id === id);
     if (i === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     index[i].description = description ?? "";
-    await setKBIndex(index);
+    await setKBIndex(index, userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("PATCH /api/knowledge error:", err);
@@ -304,17 +304,17 @@ export async function DELETE(request) {
     }
 
     const { id } = await request.json();
-    const index  = await getKBIndex();
+    const index  = await getKBIndex(userId);
     const entry  = index.find(f => f.id === id);
 
     if (entry) {
-      await deleteRawFile(entry.id);
-      if (entry.textFile) await deleteKBText(entry.textFile);
-      if (entry.isImage) await deleteKBImageData(entry.id);
+      await deleteRawFile(entry.id, userId);
+      if (entry.textFile) await deleteKBText(entry.textFile, userId);
+      if (entry.isImage) await deleteKBImageData(entry.id, userId);
     }
 
     const updated = index.filter(f => f.id !== id);
-    await setKBIndex(updated);
+    await setKBIndex(updated, userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE /api/knowledge error:", err);
