@@ -96,13 +96,13 @@ export async function POST(req) {
       await setPhoneMapping(phoneNumberId, userId, botId);
 
       // Save credentials to global config (webhook needs accessToken + anthropicKey)
-      const current = await getConfig();
+      const current = await getConfig(userId);
       await setConfig({
         ...current,
         accessToken:   userToken,
         phoneNumberId,
         waBusinessId:  wabaId,
-      });
+      }, userId);
     }
 
     return NextResponse.json({

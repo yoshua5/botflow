@@ -19,7 +19,7 @@ export async function POST(request) {
     const { url, businessName, anthropicKey: keyFromBody } = await request.json();
     if (!url) return NextResponse.json({ error: "URL requerida" }, { status: 400 });
 
-    const config = await getConfig();
+    const config = await getConfig(userId);
     const apiKey = keyFromBody || config.anthropicKey;
     if (!apiKey) return NextResponse.json({ error: "missing_key" }, { status: 400 });
 

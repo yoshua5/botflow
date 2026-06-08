@@ -19,7 +19,7 @@ export async function GET() {
       );
     }
 
-    const config       = await getConfig();
+    const config       = await getConfig(userId);
     const appointments = config.appointments || {};
 
     if (!appointments.sheetsId || !appointments.googleCredentials) {
@@ -52,7 +52,7 @@ export async function POST(request) {
     const { data, from } = await request.json();
     if (!data) return NextResponse.json({ error: "No data" }, { status: 400 });
 
-    const config       = await getConfig();
+    const config       = await getConfig(userId);
     const appointments = config.appointments || {};
 
     if (!appointments.enabled) {
@@ -85,7 +85,7 @@ export async function PATCH(request) {
     const { rowIndex, status } = await request.json();
     if (!rowIndex || !status) return NextResponse.json({ error: "rowIndex y status son requeridos" }, { status: 400 });
 
-    const config       = await getConfig();
+    const config       = await getConfig(userId);
     const appointments = config.appointments || {};
 
     if (!appointments.sheetsId || !appointments.googleCredentials) {
@@ -127,7 +127,7 @@ export async function DELETE(request) {
     const { rowIndex } = await request.json();
     if (!rowIndex) return NextResponse.json({ error: "rowIndex es requerido" }, { status: 400 });
 
-    const config       = await getConfig();
+    const config       = await getConfig(userId);
     const appointments = config.appointments || {};
 
     if (!appointments.sheetsId || !appointments.googleCredentials) {
@@ -157,7 +157,7 @@ export async function PUT(request) {
       );
     }
 
-    const config       = await getConfig();
+    const config       = await getConfig(userId);
     const appointments = config.appointments || {};
 
     if (!appointments.sheetsId || !appointments.googleCredentials) {

@@ -16,7 +16,7 @@ export async function GET(request) {
       );
     }
 
-    const config = await getConfig();
+    const config = await getConfig(userId);
     // Mask sensitive tokens
     const safe = {
       ...config,
@@ -45,7 +45,7 @@ export async function POST(request) {
     }
 
     const body    = await request.json();
-    const current = await getConfig();
+    const current = await getConfig(userId);
 
     const updated = { ...current, ...body };
 
@@ -63,7 +63,7 @@ export async function POST(request) {
       updated.verifyToken = current.verifyToken || "botflow123";
     }
 
-    await setConfig(updated);
+    await setConfig(updated, userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("POST /api/config error:", err);

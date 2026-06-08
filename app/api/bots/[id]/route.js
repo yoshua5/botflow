@@ -28,7 +28,7 @@ export async function GET(request, { params }) {
     }
 
     // Merge config fields into bot so the UI shows current values
-    const config = await getConfig();
+    const config = await getConfig(userId);
     const merged = {
       ...config,
       ...bot,
@@ -112,7 +112,7 @@ export async function PUT(request, { params }) {
     await setBots(bots, userId);
 
     // Also sync relevant fields to main config (used by the webhook)
-    const current = await getConfig();
+    const current = await getConfig(userId);
     const bot = bots[idx];
     const configPatch = {};
     const syncFields = [
@@ -129,7 +129,7 @@ export async function PUT(request, { params }) {
     if (bot.verifyToken)  configPatch.verifyToken  = bot.verifyToken;
     if (bot.waBusinessId) configPatch.waBusinessId = bot.waBusinessId;
 
-    await setConfig({ ...current, ...configPatch });
+    await setConfig({ ...current, ...configPatch }, userId);
 
     // If phoneNumberId was set/changed, update the phone→bot mapping
     if (bot.phoneNumberId) {
