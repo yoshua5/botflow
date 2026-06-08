@@ -6,11 +6,10 @@ import {
 } from "@/lib/storage";
 import { getPlanByPriceId } from "@/lib/plans";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 export const runtime = "nodejs";
 
 export async function POST(request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   const body = await request.text();
   const sig  = request.headers.get("stripe-signature");
 
