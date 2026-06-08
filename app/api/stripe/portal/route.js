@@ -21,12 +21,12 @@ export async function POST(request) {
 
     const origin = request.headers.get("origin") || "https://botflow-eight.vercel.app";
 
-    const session = await stripe.billingPortal.sessions.create({
+    const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/dashboard/planes`,
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: portalSession.url });
   } catch (err) {
     console.error("Stripe portal error:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
