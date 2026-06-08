@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getConfig } from "@/lib/storage";
 
 const GRAPH_VERSION = "v19.0";
@@ -15,7 +16,8 @@ async function getWACredentials() {
 // GET — fetch current WhatsApp Business profile
 export async function GET() {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -108,7 +110,8 @@ async function uploadProfileImage(accessToken, imageBuffer, imageMimeType) {
 // POST — update profile photo and/or about text
 export async function POST(request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {

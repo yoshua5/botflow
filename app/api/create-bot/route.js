@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getConfig, setConfig, getBots, setBots } from "@/lib/storage";
+import { rateLimitRoute } from "@/lib/rateLimit";
 
 const QUESTIONS = [
   { id: "businessName",      text: "¿Cuál es el nombre de tu negocio?",                                          hint: 'Ej: "Cafetería El Buen Sabor"' },
@@ -50,8 +52,12 @@ function buildConfig(answers, existingConfig) {
 }
 
 export async function POST(request) {
+  if (rateLimitRoute(request, "create-bot", { max: 20, windowMs: 60_000 })) {
+    return NextResponse.json({ error: "Demasiadas solicitudes. Espera un momento." }, { status: 429 });
+  }
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -63,7 +69,7 @@ export async function POST(request) {
 
     const { step, userAnswer, answers, anthropicKey, _autofill } = await request.json();
 
-    const config = await getConfig();
+    const config = await getConfig(userId);
 
     // ── Autofill mode: skip Claude, save directly ──────────
     if (_autofill) {
@@ -80,22 +86,25 @@ export async function POST(request) {
           greeting:         answers.greeting          || newConfig.greeting,
           extraInstructions: answers.extraInstructions || newConfig.extraInstructions || "",
         };
-        await setConfig(merged);
+        await setConfig(merged, userId);
 
         const bots   = await getBots(userId);
+        const now = new Date().toISOString();
         const newBot = {
           id:                `bot-${Date.now()}`,
           name:              merged.businessName || "Mi Bot",
           agentName:         merged.agentName    || "Asistente",
           businessName:      merged.businessName || "Mi negocio",
           status:            "ACTIVO",
-          createdAt:         new Date().toISOString(),
+          createdAt:         now,
           messageCount:      0,
           conversationCount: 0,
         };
         bots.unshift(newBot);
+        console.log(`📝 create-bot autofill: Creating bot ${newBot.id} for user ${userId}`);
         // ✅ CRITICAL: Save with userId to ensure RLS enforcement
         await setBots(bots, userId);
+        console.log(`✅ create-bot autofill: Bot saved successfully`);
         return NextResponse.json({ success: true, bot: newBot });
       } catch (err) {
         console.error("create-bot autofill error:", err);
@@ -165,7 +174,7 @@ Instrucciones:
       if (done) {
         const finalAnswers = { ...answers, [currentQuestion.id]: userAnswer };
         const newConfig    = buildConfig(finalAnswers, config);
-        await setConfig(newConfig);
+        await setConfig(newConfig, userId);
 
         const bots   = await getBots(userId);
         const newBot = {
@@ -202,7 +211,8 @@ Instrucciones:
 
 export async function GET() {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -214,13 +224,4 @@ export async function GET() {
 
     const q = QUESTIONS[0];
     return NextResponse.json({
-      question: q.text,
-      hint:     q.hint,
-      step:     0,
-      total:    QUESTIONS.length,
-    });
-  } catch (err) {
-    console.error("create-bot GET error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+      question: q

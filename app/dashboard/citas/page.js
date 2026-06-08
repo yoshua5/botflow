@@ -118,8 +118,8 @@ function TabAgenda({ aptConfig }) {
     try {
       const res  = await fetch("/api/appointments");
       const json = await res.json();
-      if (json.error && json.rows?.length === 0) setError(json.error);
-      else setData(json);
+      if (json.error && !json.rows) setError(json.error);
+      else setData({ rows: [], headers: [], ...json });
     } catch { setError("No se pudieron cargar las citas."); }
     setLoading(false);
   }, []);
@@ -178,8 +178,8 @@ function TabAgenda({ aptConfig }) {
 
   const getRowStatus = (row) => row["Estado"] || "Pendiente";
 
-  const allRows = data.rows;
-  const hasEstado = data.headers.includes("Estado");
+  const allRows = data.rows || [];
+  const hasEstado = (data.headers || []).includes("Estado");
 
   // Apply filters
   let filtered = allRows.filter(row => {
@@ -940,8 +940,4 @@ export default function CitasPage() {
       ) : tab === "agenda" ? (
         <TabAgenda aptConfig={aptConfig} />
       ) : (
-        <TabConfig config={config} onSaved={loadConfig} />
-      )}
-    </div>
-  );
-}
+        <TabConfig config={config} onSaved={loadConfig}

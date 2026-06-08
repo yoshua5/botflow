@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getBots, setBots, setPhoneMapping, getConfig, setConfig } from "@/lib/storage";
 
 export async function POST(req) {
-  const { userId } = await auth();
+  const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { code, botId } = await req.json();
@@ -83,15 +85,15 @@ export async function POST(req) {
     // Step 4: Save to bot + config + phone mapping
     if (botId) {
       // Save phoneNumberId to this specific bot
-      const bots = await getBots();
+      const bots = await getBots(userId);
       const updated = bots.map(b => b.id === botId
         ? { ...b, phoneNumberId, waBusinessId: wabaId, accessToken: userToken, displayPhone }
         : b
       );
-      await setBots(updated);
+      await setBots(updated, userId);
 
-      // Map phoneId → {userId, botId} so webhook knows which bot to use
-      await setPhoneMapping(phoneId, userId, botId);
+      // Map phoneNumberId → {userId, botId} so webhook knows which bot to use
+      await setPhoneMapping(phoneNumberId, userId, botId);
 
       // Save credentials to global config (webhook needs accessToken + anthropicKey)
       const current = await getConfig();
@@ -113,6 +115,4 @@ export async function POST(req) {
 
   } catch (err) {
     console.error("WhatsApp signup error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    return NextResponse.json({ error: err.message }

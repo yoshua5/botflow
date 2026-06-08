@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Stripe from "stripe";
 import { getSubscription } from "@/lib/storage";
 
@@ -7,7 +8,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
   try {
-    const { userId } = await auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
     const sub = await getSubscription(userId);

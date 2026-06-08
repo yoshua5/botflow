@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Stripe from "stripe";
 import { getSubscription, setStripeCustomerMapping } from "@/lib/storage";
 
@@ -7,7 +8,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
   try {
-    const { userId } = await auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
     const { planId } = await request.json();
@@ -22,7 +24,7 @@ export async function POST(request) {
     const priceId = priceMap[planId];
     if (!priceId) return NextResponse.json({ error: `Plan "${planId}" no tiene priceId configurado` }, { status: 400 });
 
-    const user = await currentUser();
+    // currentUser replaced with NextAuth session
     const email = user?.emailAddresses?.[0]?.emailAddress;
     const name  = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || email;
 

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getAnalytics, setAnalytics } from "@/lib/storage";
 
 export async function GET() {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -24,7 +26,8 @@ export async function GET() {
 
 export async function DELETE() {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {

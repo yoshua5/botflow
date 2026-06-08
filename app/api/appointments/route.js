@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getConfig } from "@/lib/storage";
 import { getSheetRows, deleteSheetRow, updateSheetCell, setupSheetHeaders } from "@/lib/google";
 import { bookAppointment } from "@/lib/bookAppointment";
@@ -7,7 +8,8 @@ import { bookAppointment } from "@/lib/bookAppointment";
 // GET — read all appointments from Google Sheets
 export async function GET() {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -36,7 +38,8 @@ export async function GET() {
 // POST — book a new appointment
 export async function POST(request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -68,7 +71,8 @@ export async function POST(request) {
 // PATCH — update appointment status (Pendiente → Confirmada / Cancelada)
 export async function PATCH(request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -109,7 +113,8 @@ export async function PATCH(request) {
 // DELETE — remove an appointment row
 export async function DELETE(request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -141,7 +146,8 @@ export async function DELETE(request) {
 // PUT — setup/repair sheet headers
 export async function PUT(request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {

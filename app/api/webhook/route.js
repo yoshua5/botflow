@@ -631,7 +631,7 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
         recipient_type: "individual",
         to: to,
         type: "image",
-        image: { id: uploadData.id, caption: caption || "" },
+        image: { id: uploadData.id, caption: imageName || "" },
       }),
     });
     if (!sendRes.ok) {
@@ -641,4 +641,3 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
   } catch (err) {
     console.error("❌ sendWhatsAppImage error:", err.message);
   }
-}

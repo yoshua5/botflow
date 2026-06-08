@@ -6,3 +6,26 @@ node_modules/
 .next/
 dist/
 build/
+# User data files (local storage mode)
+botflow-bots_*.json
+botflow-config_*.json
+botflow-knowledge*.json
+botflow-analytics*.json
+botflow-kb*.json
+stripe-customer_*.json
+subscription_*.json
+phone-mappings.json
+*.log
+server.log
+# Vercel env backup
+.env.vercel
+.env.vercel.prod
+push scripts 
+clean-and-push.ps1 
+push-with-token.ps1 
+push-github.ps1 
+push-debug.cmd 
+push-final.cmd 
+push.py 
+push.ps1 
+run-push.cmd 

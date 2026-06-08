@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getConfig, getAllKBText } from "@/lib/storage";
+import { rateLimitRoute } from "@/lib/rateLimit";
 
 export async function POST(request) {
+  if (rateLimitRoute(request, "chat", { max: 30, windowMs: 60_000 })) {
+    return NextResponse.json({ error: "Demasiadas solicitudes. Espera un momento." }, { status: 429 });
+  }
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -70,10 +76,4 @@ export async function POST(request) {
     });
 
     const data = await res.json();
-    const reply = data.content?.[0]?.text || "No pude generar una respuesta.";
-    return NextResponse.json({ reply });
-  } catch (err) {
-    console.error("Chat test error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    const reply = data.conten

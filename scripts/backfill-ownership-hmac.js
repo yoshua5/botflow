@@ -10,7 +10,7 @@
  *   node scripts/backfill-ownership-hmac.js
  *
  * Required env vars:
- *   SUPABASE_URL, SUPABASE_SERVICE_KEY, WEBHOOK_SECRET
+ *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, WEBHOOK_SECRET
  */
 
 import { createClient } from "@supabase/supabase-js";

@@ -10,7 +10,7 @@
  *
  * Required env vars (copy from .env.local or Vercel):
  *   KV_REST_API_URL, KV_REST_API_TOKEN
- *   SUPABASE_URL, SUPABASE_SERVICE_KEY
+ *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   ENCRYPTION_KEY
  *   WEBHOOK_SECRET (optional — ownership HMACs)
  *

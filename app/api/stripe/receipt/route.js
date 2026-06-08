@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getSubscription } from "@/lib/storage";
 import { getPlanById } from "@/lib/plans";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
     if (!userId) return new NextResponse("No autenticado", { status: 401 });
 
-    const user = await currentUser();
+    // currentUser replaced with NextAuth session
     const sub  = await getSubscription(userId);
     if (!sub || sub.plan === "free") return new NextResponse("Sin suscripción activa", { status: 404 });
 

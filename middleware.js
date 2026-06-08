@@ -1,26 +1,39 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { withAuth } from "next-auth/middleware";
 
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/booking(.*)",
-  "/onboarding(.*)",
-  "/conectar(.*)",
-  "/api/webhook(.*)",
-  "/api/stripe/webhook(.*)",
-  "/api/booking-config(.*)",
-  "/api/booking-slots(.*)",
-  "/api/appointments(.*)",
-  "/api/favicon(.*)",
-  "/api/chat(.*)",
-]);
+export default withAuth(
+  function middleware(req) {
+    // This function runs for authenticated requests only
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        // Allow all public routes
+        const publicPaths = [
+          "/",
+          "/sign-in",
+          "/sign-up",
+          "/booking",
+          "/onboarding",
+          "/conectar",
+          "/api/auth",
+          "/api/webhook",
+          "/api/stripe/webhook",
+          "/api/booking-config",
+          "/api/booking-slots",
+          "/api/appointments",
+          "/api/favicon",
+          "/api/chat",
+        ];
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+        const isPublic = publicPaths.some(path => req.nextUrl.pathname.startsWith(path));
+        if (isPublic) return true;
+
+        // Require token for protected routes
+        return !!token;
+      },
+    },
   }
-});
+);
 
 export const config = {
   matcher: [

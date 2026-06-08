@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 const DEFAULTS = {
@@ -15,7 +15,7 @@ const DEFAULTS = {
 };
 
 export default function AdminPage() {
-  const { user, isLoaded } = useUser();
+  const { data: session } = useSession();
   const router = useRouter();
 
   const [data, setData]     = useState(DEFAULTS);
@@ -23,8 +23,8 @@ export default function AdminPage() {
   const [saved, setSaved]   = useState(false);
 
   useEffect(() => {
-    if (isLoaded) {
-      const email = user?.emailAddresses?.[0]?.emailAddress;
+    if (session) {
+      const email = session?.user?.email;
       if (email !== "yoshualeisorek17@gmail.com") {
         router.push("/dashboard");
       } else {
@@ -33,7 +33,7 @@ export default function AdminPage() {
         });
       }
     }
-  }, [isLoaded, user, router]);
+  }, [session, router]);
 
   const set = (field, value) => setData(d => ({ ...d, [field]: value }));
 
@@ -116,7 +116,7 @@ export default function AdminPage() {
     );
   };
 
-  if (!isLoaded) return (
+  if (!session) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", fontSize: 16, color: "#64748B" }}>
       Verificando acceso...
     </div>

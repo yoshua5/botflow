@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { useSession, signOut } from "next-auth/react";
 
 // ── Dynamic <title> + <link rel="icon"> from config ──────
 function DynamicHead() {
@@ -33,19 +33,19 @@ const NAV_ITEMS = [
 
 function Sidebar({ collapsed }) {
   const pathname = usePathname();
-  const { user, isLoaded } = useUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress;
+  const { data: session } = useSession();
+  const email = session?.user?.email;
   const isSuperAdmin = email === "yoshualeisorek17@gmail.com";
 
   // Fetch real subscription plan from server
   const [planName, setPlanName] = useState("...");
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!session) return;
     fetch("/api/subscription")
       .then(r => r.json())
       .then(d => setPlanName(d.plan || "FREE PLAN"))
       .catch(() => setPlanName("FREE PLAN"));
-  }, [isLoaded]);
+  }, [session]);
 
   const isFree = planName === "FREE PLAN" || planName === "...";
   const planColor = isFree ? BLUE : "#8B5CF6";
@@ -160,9 +160,9 @@ function Sidebar({ collapsed }) {
 }
 
 function TopBar({ sidebarWidth }) {
-  const { user } = useUser();
-  const displayName = user?.firstName || user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] || "Usuario";
-  const email = user?.emailAddresses?.[0]?.emailAddress || "";
+  const { data: session } = useSession();
+  const displayName = session?.user?.name || session?.user?.email?.split("@")[0] || "Usuario";
+  const email = session?.user?.email || "";
 
   return (
     <header style={{
@@ -198,15 +198,26 @@ function TopBar({ sidebarWidth }) {
             <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{displayName}</div>
             <div style={{ fontSize: 11, color: MUTED, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</div>
           </div>
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: { width: 32, height: 32, borderRadius: 8 },
-                userButtonTrigger: { borderRadius: 8 },
-              },
+          <button
+            onClick={() => signOut({ callbackUrl: "/sign-in" })}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: "#2563EB",
+              color: "white",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 14,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
-            afterSignOutUrl="/sign-in"
-          />
+            title="Sign out"
+          >
+            {email?.charAt(0).toUpperCase()}
+          </button>
         </div>
       </div>
     </header>
@@ -392,7 +403,7 @@ export default function DashboardLayout({ children }) {
   const checkingOnboarding = false; // Onboarding redirect handled at sign-up only
 
   // Show blank while checking onboarding to avoid flash
-  if (checkingOnboarding && isLoaded && isSignedIn) {
+  if (checkingOnboarding) {
     return <div style={{ minHeight: "100vh", background: "#F8FAFF" }} />;
   }
 

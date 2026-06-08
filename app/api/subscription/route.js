@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getSubscription } from "@/lib/storage";
 import { getPlanById } from "@/lib/plans";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ plan: "free", planName: "Free" });
 
     const sub  = await getSubscription(userId);

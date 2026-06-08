@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const IS_VERCEL = !!process.env.KV_REST_API_URL;
 
@@ -10,7 +11,8 @@ async function kv() {
 
 // GET — check if onboarding is done
 export async function GET() {
-  const { userId } = await auth();
+  const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ done: false });
 
   if (IS_VERCEL) {
@@ -36,7 +38,8 @@ export async function GET() {
 
 // POST — save onboarding data and mark as done
 export async function POST(req) {
-  const { userId } = await auth();
+  const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();

@@ -170,14 +170,21 @@ function TabNegocio({ bot, setBot }) {
 function TabWhatsApp({ bot, setBot, autoConnect }) {
   const isConnected = !!(bot.phoneNumberId && bot.accessToken);
   const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState(null);
   const [showManual, setShowManual] = useState(false);
   const [fbReady, setFbReady] = useState(false);
   const autoConnectFired = useRef(false);
+  const popupCheckRef = useRef(null);
 
   // Load Facebook SDK
   useEffect(() => {
     if (window.FB) { setFbReady(true); return; }
+    const timer = setTimeout(() => {
+      // If SDK hasn't loaded after 8s, mark as ready anyway so button isn't permanently disabled
+      setFbReady(true);
+    }, 8000);
     window.fbAsyncInit = function () {
+      clearTimeout(timer);
       window.FB.init({
         appId: process.env.NEXT_PUBLIC_META_APP_ID || "1806315730812154",
         autoLogAppEvents: true,
@@ -191,13 +198,24 @@ function TabWhatsApp({ bot, setBot, autoConnect }) {
     script.async = true;
     script.defer = true;
     document.body.appendChild(script);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Clean up popup check interval on unmount
+  useEffect(() => {
+    return () => { if (popupCheckRef.current) clearInterval(popupCheckRef.current); };
   }, []);
 
   const handleFacebookConnect = () => {
-    if (!window.FB) return;
+    if (!window.FB) {
+      setConnectError("El SDK de Facebook no se pudo cargar. Intenta recargar la página.");
+      return;
+    }
     setConnecting(true);
+    setConnectError(null);
     window.FB.login(
       async (response) => {
+        if (popupCheckRef.current) { clearInterval(popupCheckRef.current); popupCheckRef.current = null; }
         if (response.authResponse?.code) {
           try {
             const res = await fetch("/api/whatsapp-signup", {
@@ -215,13 +233,13 @@ function TabWhatsApp({ bot, setBot, autoConnect }) {
                 displayPhone: data.displayPhone || "",
               });
             } else {
-              alert("No se pudo obtener el número. Intenta de nuevo.");
+              setConnectError(data.error || "No se pudo obtener el número. Intenta de nuevo.");
             }
           } catch (e) {
-            alert("Error al conectar. Intenta de nuevo.");
+            setConnectError("Error al conectar. Intenta de nuevo.");
           }
         } else {
-          alert("Conexión cancelada o sin permisos.");
+          setConnectError("Conexión cancelada o sin permisos. Intenta de nuevo.");
         }
         setConnecting(false);
       },
@@ -232,6 +250,12 @@ function TabWhatsApp({ bot, setBot, autoConnect }) {
         extras: { setup: {}, featureType: "", sessionInfoVersion: "3" },
       }
     );
+  };
+
+  const handleCancel = () => {
+    if (popupCheckRef.current) { clearInterval(popupCheckRef.current); popupCheckRef.current = null; }
+    setConnecting(false);
+    setConnectError(null);
   };
 
   const handleDisconnect = () => {
@@ -323,27 +347,44 @@ function TabWhatsApp({ bot, setBot, autoConnect }) {
 
             {/* Facebook Connect Button */}
             <button
-              onClick={handleFacebookConnect}
-              disabled={connecting || !fbReady}
+              onClick={connecting ? handleCancel : handleFacebookConnect}
+              disabled={!fbReady && !connecting}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 12,
                 padding: "14px 32px", borderRadius: 12, border: "none",
-                background: connecting ? "#CBD5E1" : "#1877F2",
-                color: WHITE, fontSize: 15, fontWeight: 700, cursor: connecting ? "not-allowed" : "pointer",
-                fontFamily: "inherit", boxShadow: connecting ? "none" : "0 4px 16px rgba(24,119,242,0.4)",
+                background: connecting ? "#DC2626" : "#1877F2",
+                color: WHITE, fontSize: 15, fontWeight: 700,
+                cursor: (!fbReady && !connecting) ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+                boxShadow: connecting ? "none" : "0 4px 16px rgba(24,119,242,0.4)",
                 transition: "all 0.2s",
               }}
-              onMouseEnter={e => { if (!connecting) e.currentTarget.style.background = "#166FE5"; }}
-              onMouseLeave={e => { if (!connecting) e.currentTarget.style.background = "#1877F2"; }}
+              onMouseEnter={e => { if (!connecting && fbReady) e.currentTarget.style.background = "#166FE5"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = connecting ? "#DC2626" : "#1877F2"; }}
             >
-              {/* Facebook logo */}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              {connecting ? "Conectando..." : !fbReady ? "Cargando..." : "Conectar con Facebook"}
+              {/* Facebook logo / spinner */}
+              {connecting ? (
+                <div style={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", animation: "spin 0.8s linear infinite" }} />
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              )}
+              {connecting ? "Cancelar" : !fbReady ? "Cargando SDK..." : "Conectar con Facebook"}
             </button>
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
-            <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 16 }}>
+            {connecting && (
+              <p style={{ fontSize: 13, color: BLUE, marginTop: 12 }}>
+                Completa el login en la ventana de Facebook que se abrió...
+              </p>
+            )}
+            {connectError && (
+              <p style={{ fontSize: 13, color: "#DC2626", marginTop: 12, background: "#FEF2F2", padding: "8px 14px", borderRadius: 8, border: "1px solid #FCA5A5" }}>
+                ⚠️ {connectError}
+              </p>
+            )}
+            <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 12 }}>
               Necesitas una cuenta de Facebook y WhatsApp Business API activa
             </p>
           </div>
@@ -820,37 +861,4 @@ export default function BotSettingsPage() {
               }}>
                 <span style={{ fontSize: 16 }}>{tab.icon}</span>
                 {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Quick stats */}
-          <div style={{ background: WHITE, border: "1.5px solid #E2E8F0", borderRadius: 14, padding: "16px", marginTop: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: MUTED, marginBottom: 12, letterSpacing: "0.05em", textTransform: "uppercase" }}>Estadísticas</div>
-            {[
-              { label: "Mensajes", val: (bot.messageCount || 0).toLocaleString() },
-              { label: "Conversaciones", val: (bot.conversationCount || 0).toLocaleString() },
-              { label: "Creado", val: bot.createdAt ? new Date(bot.createdAt).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) : "—" },
-            ].map(s => (
-              <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, color: MUTED }}>{s.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{s.val}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, background: WHITE, border: "1.5px solid #E2E8F0", borderRadius: 14, padding: "28px 32px" }}>
-          {activeTab === "general"    && <TabGeneral    bot={bot} setBot={setBot} />}
-          {activeTab === "negocio"    && <TabNegocio    bot={bot} setBot={setBot} />}
-          {activeTab === "whatsapp"   && <TabWhatsApp   bot={bot} setBot={setBot} autoConnect={activeTab === "whatsapp" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("connect") === "1"} />}
-          {activeTab === "flujo"      && <TabFlujo      bot={bot} setBot={setBot} />}
-          {activeTab === "respuestas" && <TabRespuestas bot={bot} setBot={setBot} />}
-          {activeTab === "avanzado"   && <TabAvanzado   bot={bot} setBot={setBot} />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
+              </button

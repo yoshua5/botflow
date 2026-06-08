@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getBots, setBots } from "@/lib/storage";
 
 export async function GET() {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -14,18 +16,23 @@ export async function GET() {
       );
     }
 
+    console.log(`🔍 GET /api/bots: Fetching bots for userId="${userId}"`);
+
     // ✅ CRITICAL: Pass userId explicitly to getBots()
     const bots = await getBots(userId);
+
+    console.log(`✅ GET /api/bots: Found ${bots.length} bots for userId="${userId}"`);
     return NextResponse.json({ bots });
   } catch (err) {
-    console.error("GET /api/bots error:", err);
+    console.error("❌ GET /api/bots error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 export async function PATCH(request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {
@@ -58,7 +65,8 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    const { userId } = auth();
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     // ✅ CRITICAL: Block unauthenticated requests
     if (!userId) {

@@ -1,4 +1,4 @@
-import { ClerkProvider } from "@clerk/nextjs";
+import SessionClientWrapper from "./SessionClientWrapper";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +10,12 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
-      <html lang="es">
-        <body>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="es">
+      <body>
+        <SessionClientWrapper>
+          {children}
+        </SessionClientWrapper>
+      </body>
+    </html>
   );
 }
