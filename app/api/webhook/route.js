@@ -641,3 +641,4 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
   } catch (err) {
     console.error("❌ sendWhatsAppImage error:", err.message);
   }
+}
