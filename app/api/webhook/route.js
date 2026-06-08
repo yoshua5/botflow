@@ -261,7 +261,7 @@ export async function POST(request) {
       await sendWhatsAppText(from, `📅 Elige tu fecha y hora aquí:\n${bookingUrl}`, config);
     }
 
-    // Send each image
+    // Send each image from Claude's markers
     for (const match of imageMarkers) {
       const hint = match[1].toLowerCase().trim();
       const img = kbImages.find(i =>
@@ -275,6 +275,18 @@ export async function POST(request) {
         await sendWhatsAppImage(from, img.id, img.name, config, userId);
       } else {
         console.warn(`⚠️ Imagen no encontrada para hint: ${hint}`);
+      }
+    }
+
+    // Fallback: if user asked for images but Claude didn't generate markers, send automatically
+    if (imageMarkers.length === 0 && kbImages.length > 0) {
+      const photoRequest = /\b(foto|fotos|imagen|imágenes|picture|photo|photos|muéstrame|mándame|envíame|ver|muestra|catálogo).*(foto|imagen|picture|photo)\b|\b(foto|fotos|imagen|imágenes|picture|photos)\b/i;
+      if (photoRequest.test(text)) {
+        console.log("⚠️ Fallback: usuario pidió fotos pero Claude no generó markers — enviando automáticamente");
+        for (const img of kbImages.slice(0, 3)) {
+          console.log(`🖼️ Fallback img: ${img.name}`);
+          await sendWhatsAppImage(from, img.id, img.name, config, userId);
+        }
       }
     }
 
@@ -434,18 +446,17 @@ Cuando el cliente mencione cualquier servicio, evento o producto (aunque sea de 
 
   if (kbImages.length > 0) {
     systemPrompt += `\n\n${"=".repeat(40)}
-IMÁGENES DISPONIBLES PARA ENVIAR
+IMÁGENES DISPONIBLES — COPIA EL MARCADOR EXACTO
 ${"=".repeat(40)}
-Puedes enviar estas imágenes al usuario cuando las pida:
-${kbImages.map(img => `• ID: ${img.id} | Nombre: ${img.name}${img.description ? ` | Descripción: ${img.description}` : ""}${img.preview ? ` | OCR: ${img.preview.slice(0,60)}` : ""}`).join("\n")}
+Cuando el usuario pida fotos/imágenes, incluye los marcadores de abajo COPIADOS EXACTAMENTE:
+${kbImages.map((img, i) => `${i + 1}. [SEND_IMAGE:${img.id}] → ${img.name}${img.description ? ` (${img.description})` : ""}${img.preview ? ` | ${img.preview.slice(0, 60)}` : ""}`).join("\n")}
 
-REGLAS PARA ENVIAR IMÁGENES:
-- Cuando el usuario pida fotos/imágenes/catálogo visual, responde el texto normalmente.
-- Al FINAL de tu mensaje agrega: [SEND_IMAGE:ID_exacto]
-- Si pide varias: [SEND_IMAGE:id1] [SEND_IMAGE:id2]
-- Usa el ID EXACTO de la lista de arriba.
-- NUNCA digas que no puedes enviar imágenes. Siempre puedes.
-- Si el usuario pide "todas las fotos", envía las primeras 3-4 para no saturar.
+INSTRUCCIÓN CRÍTICA — IMÁGENES:
+• Cuando el usuario pida fotos/imágenes/catálogo: copia y pega los marcadores al FINAL de tu respuesta.
+• Ejemplo correcto: "¡Aquí te muestro nuestro catálogo! 📸 [SEND_IMAGE:${kbImages[0]?.id}]"
+• Si pide todas las fotos: incluye todos los marcadores (máximo 4).
+• NUNCA digas que no puedes enviar imágenes. SIEMPRE puedes copiando el marcador.
+• NUNCA escribas el ID manualmente — copia el marcador completo de la lista de arriba.
 ${"=".repeat(40)}`;
   }
 
@@ -626,30 +637,4 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
       `https://graph.facebook.com/v19.0/${config.phoneNumberId}/media`,
       { method: "POST", headers: { Authorization: `Bearer ${config.accessToken}` }, body: formData }
     );
-    const uploadData = await uploadRes.json();
-
-    if (!uploadRes.ok || !uploadData.id) {
-      console.error("❌ Media upload error:", JSON.stringify(uploadData));
-      return;
-    }
-
-    // Send image using the media_id
-    const sendRes = await fetch(`https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.accessToken}` },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: to,
-        type: "image",
-        image: { id: uploadData.id, caption: imageName || "" },
-      }),
-    });
-    if (!sendRes.ok) {
-      const errData = await sendRes.json();
-      console.error("❌ Error sending image:", JSON.stringify(errData));
-    }
-  } catch (err) {
-    console.error("❌ sendWhatsAppImage error:", err.message);
-  }
-}
+    const uploadData = 
