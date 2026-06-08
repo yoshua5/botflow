@@ -211,10 +211,26 @@ function TabWhatsApp({ bot, setBot, autoConnect }) {
       setConnectError("El SDK de Facebook no se pudo cargar. Intenta recargar la página.");
       return;
     }
+
+    // If no config_id is set, go straight to manual entry
+    const configId = process.env.NEXT_PUBLIC_META_CONFIG_ID || "";
+    if (!configId) {
+      setShowManual(true);
+      return;
+    }
+
     setConnecting(true);
     setConnectError(null);
+
+    // Auto-cancel after 45s if popup never responds
+    const timeout = setTimeout(() => {
+      setConnecting(false);
+      setConnectError("El popup no respondió. Intenta de nuevo o usa credenciales manuales.");
+    }, 45000);
+
     window.FB.login(
       async (response) => {
+        clearTimeout(timeout);
         if (popupCheckRef.current) { clearInterval(popupCheckRef.current); popupCheckRef.current = null; }
         if (response.authResponse?.code) {
           try {
@@ -244,7 +260,7 @@ function TabWhatsApp({ bot, setBot, autoConnect }) {
         setConnecting(false);
       },
       {
-        config_id: process.env.NEXT_PUBLIC_META_CONFIG_ID || "",
+        config_id: configId,
         response_type: "code",
         override_default_response_type: true,
         extras: { setup: {}, featureType: "", sessionInfoVersion: "3" },
