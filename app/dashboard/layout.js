@@ -24,11 +24,16 @@ const MUTED = "#64748B";
 const WHITE = "#FFFFFF";
 
 const NAV_ITEMS = [
-  { icon: "▦",  label: "Dashboard",    href: "/dashboard" },
-  { icon: "🤖", label: "My Bots",      href: "/dashboard/bots" },
-  { icon: "📊", label: "Analytics",    href: "/dashboard/analytics" },
-  { icon: "📚", label: "Conocimientos",href: "/dashboard/knowledge" },
-  { icon: "👥", label: "Contactos",    href: "/dashboard/contactos" },
+  { icon: "▦",  label: "Dashboard",  href: "/dashboard" },
+  { icon: "🤖", label: "My Bots",    href: "/dashboard/bots" },
+  { icon: "📊", label: "Analytics",  href: "/dashboard/analytics" },
+  { icon: "👥", label: "Contactos",  href: "/dashboard/contactos" },
+];
+
+const CATALOGOS_CHILDREN = [
+  { icon: "🗂",  label: "Ver Catálogo",    href: "/dashboard/catalogos" },
+  { icon: "📸",  label: "Subir Contenido", href: "/dashboard/catalogos/contenido" },
+  { icon: "🌐",  label: "Desde Sitio Web", href: "/dashboard/catalogos/sitio-web" },
 ];
 
 function Sidebar({ collapsed }) {
@@ -36,6 +41,9 @@ function Sidebar({ collapsed }) {
   const { data: session } = useSession();
   const email = session?.user?.email;
   const isSuperAdmin = email === "yoshualeisorek17@gmail.com";
+
+  const isCatalogosActive = pathname.startsWith("/dashboard/catalogos") || pathname.startsWith("/dashboard/knowledge");
+  const [catalogosOpen, setCatalogosOpen] = useState(isCatalogosActive);
 
   // Fetch real subscription plan from server
   const [planName, setPlanName] = useState("...");
@@ -105,6 +113,56 @@ function Sidebar({ collapsed }) {
             </a>
           );
         })}
+
+        {/* Catálogos dropdown */}
+        <div>
+          <button onClick={() => !collapsed && setCatalogosOpen(o => !o)} style={{
+            display: "flex", alignItems: "center", gap: 10, width: "100%",
+            padding: collapsed ? "10px" : "10px 12px",
+            borderRadius: 10, border: "none", cursor: "pointer",
+            background: isCatalogosActive ? BLUE_LIGHT : "transparent",
+            color: isCatalogosActive ? BLUE : MUTED,
+            fontWeight: isCatalogosActive ? 700 : 500,
+            fontSize: 14, transition: "all 0.15s",
+            justifyContent: collapsed ? "center" : "flex-start",
+          }}
+            onMouseEnter={e => { if (!isCatalogosActive) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
+            onMouseLeave={e => { if (!isCatalogosActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}
+          >
+            <span style={{ fontSize: 16, flexShrink: 0 }}>📦</span>
+            {!collapsed && (
+              <>
+                <span style={{ flex: 1, textAlign: "left" }}>Catálogos</span>
+                <span style={{ fontSize: 10, transition: "transform 0.2s", transform: catalogosOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+              </>
+            )}
+          </button>
+
+          {/* Sub-items */}
+          {!collapsed && catalogosOpen && (
+            <div style={{ marginLeft: 8, marginTop: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+              {CATALOGOS_CHILDREN.map(child => {
+                const active = pathname === child.href || (pathname.startsWith(child.href) && child.href !== "/dashboard/catalogos") || (child.href === "/dashboard/catalogos" && pathname === "/dashboard/catalogos");
+                return (
+                  <a key={child.href} href={child.href} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 12px", borderRadius: 8,
+                    background: active ? BLUE_LIGHT : "transparent",
+                    color: active ? BLUE : MUTED,
+                    textDecoration: "none", fontSize: 13,
+                    fontWeight: active ? 700 : 500, transition: "all 0.15s",
+                  }}
+                    onMouseEnter={e => { if (!active) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
+                    onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}
+                  >
+                    <span style={{ fontSize: 14 }}>{child.icon}</span>
+                    <span>{child.label}</span>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* Bottom section */}
@@ -346,77 +404,4 @@ function ChatWidget() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input bar */}
-          <div style={{ padding: "10px 12px", borderTop: "1px solid #F1F5F9", display: "flex", gap: 8, alignItems: "center" }}>
-            {/* Mic button */}
-            <button onClick={startVoice} title={listening ? "Detener" : "Hablar"} style={{
-              width: 38, height: 38, borderRadius: "50%", border: "none", cursor: "pointer",
-              background: listening ? "#EF4444" : "#F1F5F9", flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 17, transition: "all 0.2s",
-              boxShadow: listening ? "0 0 0 4px rgba(239,68,68,0.25)" : "none",
-            }}>
-              {listening ? "⏹" : "🎤"}
-            </button>
-
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && send(input)}
-              placeholder={listening ? "Escuchando..." : "Escribe un mensaje..."}
-              disabled={loading || listening}
-              style={{
-                flex: 1, padding: "9px 12px", borderRadius: 12,
-                border: "1.5px solid #E2E8F0", fontSize: 13, outline: "none",
-                fontFamily: "inherit", background: listening ? "#FFF1F1" : WHITE,
-                color: TEXT, transition: "all 0.2s",
-              }}
-              onFocus={e => e.target.style.borderColor = "#93C5FD"}
-              onBlur={e => e.target.style.borderColor = "#E2E8F0"}
-            />
-
-            <button onClick={() => send(input)} disabled={!input.trim() || loading} style={{
-              width: 38, height: 38, borderRadius: "50%", border: "none",
-              background: input.trim() && !loading ? BLUE : "#E2E8F0",
-              cursor: input.trim() && !loading ? "pointer" : "not-allowed",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, color: WHITE, flexShrink: 0, transition: "all 0.2s",
-            }}>
-              ➤
-            </button>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes chatIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes pulse  { 0%,100%{opacity:0.3} 50%{opacity:1} }
-      `}</style>
-    </>
-  );
-}
-
-export default function DashboardLayout({ children }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const sidebarWidth = collapsed ? 64 : 240;
-
-  const checkingOnboarding = false; // Onboarding redirect handled at sign-up only
-
-  // Show blank while checking onboarding to avoid flash
-  if (checkingOnboarding) {
-    return <div style={{ minHeight: "100vh", background: "#F8FAFF" }} />;
-  }
-
-  return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFF", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <DynamicHead />
-      <Sidebar collapsed={collapsed} />
-      <div style={{ marginLeft: sidebarWidth, flex: 1, transition: "margin-left 0.25s ease" }}>
-        <TopBar sidebarWidth={sidebarWidth} />
-        <main style={{ marginTop: 60, padding: "32px 28px", minHeight: "calc(100vh - 60px)" }}>
-          {children}
-        </main>
-      </div>
-      <ChatWidget />
-    </div>
-  )
+          {/* Inpu
