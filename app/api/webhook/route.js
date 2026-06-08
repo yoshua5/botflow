@@ -85,13 +85,11 @@ export async function POST(request) {
     }
 
     // ── 2. Verify webhook ownership ──────────────────────────
-    // Ensures the phone_number_id was legitimately registered by this userId
-    // and hasn't been hijacked by another user's mapping.
     if (!skipOwnershipCheck) {
       const storedHmac = await getPhoneMappingHmac(phoneId);
       if (!verifyOwnershipHmac(phoneId, userId, storedHmac)) {
         console.error(`❌ Ownership HMAC mismatch for phoneId=${phoneId} userId=${userId} — possible hijack attempt`);
-        return NextResponse.json({ status: "ok" }); // silent rejection
+        return NextResponse.json({ status: "ok" });
       }
     }
 
@@ -101,10 +99,9 @@ export async function POST(request) {
     // ── Find the specific bot for this phone number ────────
     const bots  = await getBots(userId);
     const botId = await getBotIdByPhone(phoneId);
-    // Match by botId first, then by phoneNumberId field, then fall back to first bot
     const activeBot = (botId ? bots.find(b => b.id === botId) : null)
       || bots.find(b => b.phoneNumberId === phoneId)
-      || bots.find(b => b.status !== "INACTIVO") // first active bot
+      || bots.find(b => b.status !== "INACTIVO")
       || bots[0];
 
     if (activeBot && activeBot.status === "INACTIVO") {
@@ -112,19 +109,14 @@ export async function POST(request) {
       return NextResponse.json({ status: "ok" });
     }
 
-    // Merge: baseConfig has latest saved values, activeBot fills in missing fields
-    // Only let baseConfig override if the value is actually set (not undefined/null)
     const GENERIC_DEFAULTS = ["Asistente", "Assistant", "Mi Bot", "My Bot", "Bot", ""];
     const config = { ...activeBot };
-    // Apply baseConfig fields only when they have real values
     for (const [k, v] of Object.entries(baseConfig)) {
       if (v !== undefined && v !== null) config[k] = v;
     }
-    // Fix generic agentName
     if (GENERIC_DEFAULTS.includes(config.agentName || "")) {
       config.agentName = activeBot?.agentName || activeBot?.name || config.agentName;
     }
-    // Always prefer activeBot's flow if baseConfig doesn't have one
     if (!config.flow && activeBot?.flow) config.flow = activeBot.flow;
     if (activeBot) console.log(`🤖 Bot: ${config.agentName} / ${config.businessName} (id: ${activeBot.id})`);
 
@@ -135,7 +127,7 @@ export async function POST(request) {
 
     // ── Resolve user message text ──────────────────────────
     let text;
-    let transcribedNote = "";   // optional note shown to user
+    let transcribedNote = "";
 
     if (isAudio) {
       const mediaId = message.audio?.id;
@@ -153,14 +145,12 @@ export async function POST(request) {
       console.log(`🎤 Transcripción: "${text}"`);
       transcribedNote = `🎤 _"${text}"_\n\n`;
     } else if (isInteractive) {
-      // Button or list reply — extract selected option title
       const btnReply  = message.interactive?.button_reply;
       const listReply = message.interactive?.list_reply;
       const selected  = btnReply || listReply;
       text = selected?.title || selected?.id || "opción seleccionada";
       console.log(`🔘 Opción seleccionada: "${text}" (id: ${selected?.id})`);
 
-      // Find instruction for this option from flow config
       const flow = config.flow || activeBot?.flow;
       if (flow?.menuItems) {
         const matched = flow.menuItems.find(it => it.id === selected?.id || it.title === text);
@@ -183,10 +173,8 @@ export async function POST(request) {
     if (kbImages.length) console.log(`🖼️ Imágenes en KB: ${kbImages.length}`);
     if (availableSlots) console.log(`📅 Slots disponibles en prompt`);
 
-    // Call Claude with full conversation history
     const aiReply = await callClaude(text, config, knowledge, kbImages, history, availableSlots);
 
-    // Save updated conversation history
     const updatedHistory = [
       ...history,
       { role: "user", content: text },
@@ -209,12 +197,10 @@ export async function POST(request) {
           const jsonStr = rest.slice(0, jsonEnd + 1);
           const appointmentData = JSON.parse(jsonStr);
           console.log("📅 Booking appointment:", JSON.stringify(appointmentData));
-          // Direct call — no HTTP roundtrip. Also sends WhatsApp confirmation to client.
           const waConfig = { accessToken: config.accessToken, phoneNumberId: config.phoneNumberId };
           bookAppointment(appointmentData, from, config.appointments || {}, waConfig)
             .then(r => console.log(`📅 Booking result: cal=${r.results.calendar} sheets=${r.results.sheets} wa=${r.results.whatsapp}`))
             .catch(err => console.error("❌ Appointment booking error:", err.message));
-          // Remove the marker from the reply
           cleanReply = aiReply.slice(0, bookStart) + aiReply.slice(bookStart + "[BOOK_APPOINTMENT:".length + jsonEnd + 2);
         }
       } catch (err) {
@@ -231,7 +217,6 @@ export async function POST(request) {
     const imageMarkers = [...cleanReply.matchAll(imageMarkerRegex)];
     const cleanText = cleanReply.replace(imageMarkerRegex, "").trim();
 
-    // Send text (prepend transcription note if voice message)
     const finalText = transcribedNote + cleanText;
     if (finalText) await sendWhatsAppText(from, finalText, config);
 
@@ -239,8 +224,6 @@ export async function POST(request) {
     const flow = config.flow || activeBot?.flow || baseConfig.flow;
     const flowMode = flow?.mode || "text";
     const isFirstMsg = history.length === 0;
-    // Menu: always in "menu" mode, only first msg in "hybrid" mode
-    // Don't show after button click (isInteractive), and only if items exist
     const shouldShowMenu = !!(
       flow?.menuItems?.length > 0 &&
       (flowMode === "menu" || (flowMode === "hybrid" && isFirstMsg)) &&
@@ -261,7 +244,7 @@ export async function POST(request) {
       await sendWhatsAppText(from, `📅 Elige tu fecha y hora aquí:\n${bookingUrl}`, config);
     }
 
-    // Send each image from Claude's markers
+    // Send each image from Claude markers
     for (const match of imageMarkers) {
       const hint = match[1].toLowerCase().trim();
       const img = kbImages.find(i =>
@@ -301,7 +284,6 @@ export async function POST(request) {
 }
 
 async function callClaude(userMessage, config, knowledge = "", kbImages = [], history = [], availableSlots = null) {
-  // Use agentName — if it's the generic default, try to find a better name
   const rawAgent = config.agentName || "";
   const isGeneric = !rawAgent || rawAgent === "Asistente" || rawAgent === "Assistant" || rawAgent === "Bot";
   const agentName = isGeneric
@@ -330,7 +312,6 @@ async function callClaude(userMessage, config, knowledge = "", kbImages = [], hi
   if (config.website)         systemPrompt += `\nSitio web: ${config.website}`;
   if (config.pricePolicy)     systemPrompt += `\nPolítica de precios: ${config.pricePolicy}`;
 
-  // Catalog items
   if (config.catalog && config.catalog.length > 0) {
     const validItems = config.catalog.filter(c => c.name);
     if (validItems.length > 0) {
@@ -347,11 +328,9 @@ async function callClaude(userMessage, config, knowledge = "", kbImages = [], hi
   if (shortAnswers) systemPrompt += "\nSé breve y conciso (máximo 3-4 oraciones).";
   if (useEmojis)    systemPrompt += "\nUsa emojis con moderación.";
   else              systemPrompt += "\nNo uses emojis.";
-  // Greeting only on first message — always enforce current agentName
   const isFirstMessage = history.length === 0;
   systemPrompt += `\nTu nombre es SIEMPRE "${agentName}". Nunca uses otro nombre al presentarte.`;
   if (config.greeting && isFirstMessage) {
-    // Replace any old agent name in the greeting with the current agentName
     const fixedGreeting = config.greeting
       .replace(/Soy \*?[^,.\*\n😊!?]+\*?/i, `Soy *${agentName}*`)
       .replace(/Me llamo \*?[^,.\*\n😊!?]+\*?/i, `Me llamo *${agentName}*`)
@@ -362,7 +341,6 @@ async function callClaude(userMessage, config, knowledge = "", kbImages = [], hi
   }
   systemPrompt += `\nIMPORTANTE: ${isFirstMessage ? "Esta es la primera vez que hablas con este usuario, preséntate con tu nombre correcto." : "Ya conoces a este usuario, NO te vuelvas a presentar. Continúa la conversación de forma natural."}`;
 
-  // ── REGLAS DE CONVERSACIÓN CONTINUA ─────────────────────
   systemPrompt += `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -399,7 +377,6 @@ Cuando el cliente mencione cualquier servicio, evento o producto (aunque sea de 
   }
   if (config.extraInstructions) systemPrompt += `\n\nInstrucciones especiales: ${config.extraInstructions}`;
 
-  // ── Flow mode instructions ─────────────────────────────
   const flow     = config.flow || config._flow;
   const flowMode = flow?.mode || "text";
   if (flowMode === "menu" && flow?.menuItems?.length > 0) {
@@ -410,7 +387,6 @@ Cuando el cliente mencione cualquier servicio, evento o producto (aunque sea de 
     systemPrompt += `\n\nMODO HÍBRIDO: Tienes un menú con opciones (${optionsList}) pero el usuario también puede escribir texto libre. Responde a lo que el usuario envíe.`;
   }
 
-  // ── Appointments system ────────────────────────────────
   const appointments = config.appointments;
   if (appointments?.enabled && appointments.fields?.length > 0) {
     const fields   = appointments.fields;
@@ -445,15 +421,22 @@ Cuando el cliente mencione cualquier servicio, evento o producto (aunque sea de 
   }
 
   if (kbImages.length > 0) {
+    const imgList = kbImages.map((img, i) => {
+      let line = `${i + 1}. [SEND_IMAGE:${img.id}] → ${img.name}`;
+      if (img.description) line += ` (${img.description})`;
+      if (img.preview) line += ` | ${img.preview.slice(0, 60)}`;
+      return line;
+    }).join("\n");
+    const exampleId = kbImages[0] ? kbImages[0].id : "ID_EJEMPLO";
     systemPrompt += `\n\n${"=".repeat(40)}
 IMÁGENES DISPONIBLES — COPIA EL MARCADOR EXACTO
 ${"=".repeat(40)}
 Cuando el usuario pida fotos/imágenes, incluye los marcadores de abajo COPIADOS EXACTAMENTE:
-${kbImages.map((img, i) => `${i + 1}. [SEND_IMAGE:${img.id}] → ${img.name}${img.description ? ` (${img.description})` : ""}${img.preview ? ` | ${img.preview.slice(0, 60)}` : ""}`).join("\n")}
+${imgList}
 
 INSTRUCCIÓN CRÍTICA — IMÁGENES:
 • Cuando el usuario pida fotos/imágenes/catálogo: copia y pega los marcadores al FINAL de tu respuesta.
-• Ejemplo correcto: "¡Aquí te muestro nuestro catálogo! 📸 [SEND_IMAGE:${kbImages[0]?.id}]"
+• Ejemplo correcto: "¡Aquí te muestro nuestro catálogo! 📸 [SEND_IMAGE:${exampleId}]"
 • Si pide todas las fotos: incluye todos los marcadores (máximo 4).
 • NUNCA digas que no puedes enviar imágenes. SIEMPRE puedes copiando el marcador.
 • NUNCA escribas el ID manualmente — copia el marcador completo de la lista de arriba.
@@ -463,7 +446,6 @@ ${"=".repeat(40)}`;
   systemPrompt += "\nSi preguntan por citas o pedidos, pide nombre, fecha y hora.";
   systemPrompt += "\nNunca inventes información que no esté en tu base de conocimientos.";
 
-  // Build messages array: history + current message
   const messages = [
     ...history.map(m => ({ role: m.role, content: m.content })),
     { role: "user", content: userMessage },
@@ -485,7 +467,6 @@ ${"=".repeat(40)}`;
 // ── Transcribe WhatsApp voice note via Whisper ────────────
 async function transcribeWhatsAppAudio(mediaId, config, openaiKey) {
   try {
-    // Step 1: Get media URL from WhatsApp
     const mediaRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
       headers: { Authorization: `Bearer ${config.accessToken}` },
     });
@@ -497,7 +478,6 @@ async function transcribeWhatsAppAudio(mediaId, config, openaiKey) {
     const audioUrl  = mediaData.url;
     const mimeType  = mediaData.mime_type || "audio/ogg";
 
-    // Step 2: Download the audio binary
     const audioRes = await fetch(audioUrl, {
       headers: { Authorization: `Bearer ${config.accessToken}` },
     });
@@ -507,8 +487,6 @@ async function transcribeWhatsAppAudio(mediaId, config, openaiKey) {
     }
     const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
 
-    // Step 3: Send to OpenAI Whisper
-    // Determine file extension from mime type
     const extMap = {
       "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "mp4",
       "audio/wav": "wav", "audio/webm": "webm", "audio/m4a": "m4a",
@@ -520,7 +498,7 @@ async function transcribeWhatsAppAudio(mediaId, config, openaiKey) {
     const blob = new Blob([audioBuffer], { type: mimeType });
     formData.append("file", blob, filename);
     formData.append("model", "whisper-1");
-    formData.append("language", "es");   // Spanish by default; Whisper auto-detects anyway
+    formData.append("language", "es");
 
     const whisperRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -597,7 +575,6 @@ async function sendWhatsAppMenu(to, flow, config) {
   if (!res.ok) {
     const err = await res.json();
     console.error("❌ WA menu error:", JSON.stringify(err));
-    // Fallback: send menu as plain text if interactive fails
     const textMenu = welcome + "\n\n" + items.map((it, i) => `${i + 1}. ${it.title}`).join("\n");
     await fetch(`https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`, {
       method: "POST",
@@ -626,7 +603,6 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
     const { base64, mimeType, filename } = imgData;
     const buffer = Buffer.from(base64, "base64");
 
-    // Upload to WhatsApp media API
     const formData = new FormData();
     formData.append("messaging_product", "whatsapp");
     formData.append("type", mimeType || "image/jpeg");
@@ -637,4 +613,29 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
       `https://graph.facebook.com/v19.0/${config.phoneNumberId}/media`,
       { method: "POST", headers: { Authorization: `Bearer ${config.accessToken}` }, body: formData }
     );
-    const uploadData = 
+    const uploadData = await uploadRes.json();
+
+    if (!uploadRes.ok || !uploadData.id) {
+      console.error("❌ Media upload error:", JSON.stringify(uploadData));
+      return;
+    }
+
+    const sendRes = await fetch(`https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.accessToken}` },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to,
+        type: "image",
+        image: { id: uploadData.id, caption: imageName || "" },
+      }),
+    });
+    if (!sendRes.ok) {
+      const errData = await sendRes.json();
+      console.error("❌ Error sending image:", JSON.stringify(errData));
+    }
+  } catch (err) {
+    console.error("❌ sendWhatsAppImage error:", err.message);
+  }
+}
