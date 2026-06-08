@@ -8,8 +8,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const authSession = await getServerSession(authOptions);
+    const userId = authSession?.user?.id;
+    const email  = authSession?.user?.email || userId;
+    const name   = authSession?.user?.name  || email;
     if (!userId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
     const { planId } = await request.json();
@@ -23,10 +25,6 @@ export async function POST(request) {
     };
     const priceId = priceMap[planId];
     if (!priceId) return NextResponse.json({ error: `Plan "${planId}" no tiene priceId configurado` }, { status: 400 });
-
-    // currentUser replaced with NextAuth session
-    const email = user?.emailAddresses?.[0]?.emailAddress;
-    const name  = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || email;
 
     const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "https://botflow-eight.vercel.app";
 
@@ -45,7 +43,7 @@ export async function POST(request) {
       await setStripeCustomerMapping(customerId, userId);
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       payment_method_types: ["card"],
@@ -60,7 +58,7 @@ export async function POST(request) {
       billing_address_collection: "auto",
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: checkoutSession.url });
   } catch (err) {
     console.error("Stripe checkout error:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
