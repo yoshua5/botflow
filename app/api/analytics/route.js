@@ -16,7 +16,7 @@ export async function GET() {
       );
     }
 
-    const data = await getAnalytics();
+    const data = await getAnalytics(userId);
     return NextResponse.json(data);
   } catch (err) {
     console.error("GET /api/analytics error:", err);
@@ -37,7 +37,7 @@ export async function DELETE() {
       );
     }
 
-    await setAnalytics({ totalMessages: 0, totalConversations: 0, dailyCounts: {}, recentMessages: [] });
+    await setAnalytics({ totalMessages: 0, totalConversations: 0, dailyCounts: {}, recentMessages: [] }, userId);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE /api/analytics error:", err);
