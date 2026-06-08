@@ -28,7 +28,6 @@ const NAV_ITEMS = [
   { icon: "🤖", label: "My Bots",      href: "/dashboard/bots" },
   { icon: "📊", label: "Analytics",    href: "/dashboard/analytics" },
   { icon: "📚", label: "Conocimientos",href: "/dashboard/knowledge" },
-  { icon: "📅", label: "Citas",        href: "/dashboard/citas" },
 ];
 
 function Sidebar({ collapsed }) {
@@ -421,3 +420,4 @@ export default function DashboardLayout({ children }) {
     </div>
   );
 }
+                                                                     
