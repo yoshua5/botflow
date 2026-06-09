@@ -166,7 +166,12 @@ export async function POST(request) {
     }
 
     // ── Appointment flow ───────────────────────────────────────────────
-    const _apptHandled = await handleAppointmentFlow(text, from, userId, activeBot?.id || null, contactName || null, config);
+    let _apptHandled = false;
+    try {
+      _apptHandled = await handleAppointmentFlow(text, from, userId, activeBot?.id || null, contactName || null, config);
+    } catch (apptErr) {
+      console.error("⚠️ Appointment flow error (continuing):", apptErr.message);
+    }
     if (_apptHandled) return NextResponse.json({ status: "ok" });
     // ───────────────────────────────────────────────────────────────────
 
@@ -356,11 +361,20 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     if (!fields || fields.length === 0) return false; // no fields configured — let Claude handle it
 
     // Start collection
-    await db.from("conversations").upsert({
-      user_id:           userId,
-      from_phone:        from,
-      appointment_state: { collecting: true, fields, currentIdx: 0, data: {} },
-    }, { onConflict: "user_id,from_phone" });
+    // Safe update — conversations unique constraint is (user_id, bot_id, from_phone)
+    // We update any row matching user+phone (bot_id may vary), or insert if none
+    const { data: existingConv } = await db.from("conversations")
+      .select("id").eq("user_id", userId).eq("from_phone", from).limit(1).maybeSingle();
+    if (existingConv) {
+      await db.from("conversations")
+        .update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {} } })
+        .eq("user_id", userId).eq("from_phone", from);
+    } else {
+      await db.from("conversations").insert({
+        user_id: userId, from_phone: from,
+        appointment_state: { collecting: true, fields, currentIdx: 0, data: {} },
+      });
+    }
 
     await sendWhatsAppText(from, `¡Hola! Con gusto te ayudo a agendar tu cita 📋\n\n${fields[0].question}`, config);
     return true; // handled

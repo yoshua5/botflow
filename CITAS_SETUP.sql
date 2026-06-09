@@ -42,3 +42,18 @@ CREATE POLICY "deny_anon_fields" ON public.appointment_fields FOR ALL TO anon   
 CREATE POLICY "deny_auth_fields" ON public.appointment_fields FOR ALL TO authenticated USING (false);
 CREATE POLICY "deny_anon_appts"  ON public.appointments        FOR ALL TO anon    USING (false);
 CREATE POLICY "deny_auth_appts"  ON public.appointments        FOR ALL TO authenticated USING (false);
+
+-- 6. Availability config (run this too)
+CREATE TABLE IF NOT EXISTS public.appointment_config (
+  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id      TEXT NOT NULL UNIQUE,
+  available_days  INTEGER[] DEFAULT '{1,2,3,4,5}',  -- 0=Sun,1=Mon...6=Sat
+  start_time   TEXT DEFAULT '09:00',
+  end_time     TEXT DEFAULT '18:00',
+  slot_minutes INTEGER DEFAULT 60,
+  notes        TEXT DEFAULT '',
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.appointment_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "deny_anon_config"  ON public.appointment_config FOR ALL TO anon         USING (false);
+CREATE POLICY "deny_auth_config"  ON public.appointment_config FOR ALL TO authenticated USING (false);
