@@ -176,7 +176,7 @@ export async function POST(request) {
           contact_name: contactName || null,
           updated_at:   new Date().toISOString(),
         },
-        { onConflict: "user_id,from_phone" }
+        { onConflict: "user_id,bot_id,from_phone" }
       );
     } catch (upsertErr) {
       console.error("⚠️ Contact upsert error (continuing):", upsertErr.message);
@@ -852,4 +852,4 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
     );
     const uploadData = await uploadRes.json();
 
-    if (!upl
+    i
