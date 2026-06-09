@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const BL = "#2563EB", BLL = "#EFF6FF", TX = "#0F172A", MT = "#64748B", WH = "#FFFFFF";
 const BD = "#E2E8F0", GR = "#10B981", GRL = "#ECFDF5", RD = "#EF4444", RDL = "#FEF2F2";
-const YL = "#F59E0B", YLL = "#FFFBEB";
+const YL = "#F59E0B", YLL = "#FFFBEB", SL = "#F8FAFC";
 
 function Card({ children, style = {} }) {
   return <div style={{ background: WH, borderRadius: 16, border: `1px solid ${BD}`, padding: "28px 32px", ...style }}>{children}</div>;
@@ -42,7 +42,6 @@ function StepWizard({ onDone, onCancel }) {
 
   return (
     <div style={{ marginTop: 24 }}>
-      {/* Steps indicator */}
       <div style={{ display: "flex", gap: 0, marginBottom: 32, position: "relative" }}>
         <div style={{ position: "absolute", top: 16, left: "8%", right: "8%", height: 2, background: BD, zIndex: 0 }} />
         {steps.map(s => (
@@ -64,7 +63,7 @@ function StepWizard({ onDone, onCancel }) {
             <li>En el panel izquierdo, selecciona <strong>WhatsApp → Configuración</strong>.</li>
             <li>Agrega un número de teléfono de prueba o uno verificado de negocio.</li>
             <li>Copia tu <strong>Phone Number ID</strong> y <strong>Access Token</strong> (permanente).</li>
-            <li>Configura el Webhook con la URL: <code style={{ background: SL || "#F8FAFC", padding: "2px 6px", borderRadius: 4, fontSize: 12, color: TX }}>https://botflow-nine.vercel.app/api/webhook</code></li>
+            <li>Configura el Webhook con la URL: <code style={{ background: SL, padding: "2px 6px", borderRadius: 4, fontSize: 12, color: TX }}>https://botflow-nine.vercel.app/api/webhook</code></li>
           </ol>
           <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
             <button onClick={() => setStep(2)} style={{ padding: "10px 24px", background: BL, color: WH, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Siguiente →</button>
@@ -123,7 +122,106 @@ function StepWizard({ onDone, onCancel }) {
   );
 }
 
-const SL = "#F8FAFC";
+function WaProfileCard({ connected }) {
+  const fileRef = useRef(null);
+  const [profile, setProfile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [imgData, setImgData] = useState(null);
+
+  useEffect(() => {
+    if (!connected) return;
+    fetch("/api/whatsapp/profile")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && !d.error) setProfile(d); });
+  }, [connected]);
+
+  function onFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { alert("Solo imágenes (JPG, PNG)"); return; }
+    if (file.size > 5 * 1024 * 1024) { alert("Máximo 5 MB"); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const result = ev.target.result;
+      setPreview(result);
+      const base64 = result.split(",")[1];
+      setImgData({ base64, mimeType: file.type });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function savePhoto() {
+    if (!imgData) return;
+    setUploading(true);
+    const r = await fetch("/api/whatsapp/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64: imgData.base64, mimeType: imgData.mimeType }),
+    });
+    const d = await r.json();
+    setUploading(false);
+    if (r.ok) {
+      alert("✅ Foto de perfil actualizada en WhatsApp");
+      setPreview(null);
+      setImgData(null);
+      // Reload profile
+      fetch("/api/whatsapp/profile").then(r2 => r2.ok ? r2.json() : null).then(d2 => { if (d2 && !d2.error) setProfile(d2); });
+    } else {
+      alert("❌ " + (d.error || "Error desconocido"));
+    }
+  }
+
+  if (!connected) return null;
+
+  const currentPic = preview || profile?.profile_picture_url;
+
+  return (
+    <Card style={{ marginTop: 20 }}>
+      <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: TX }}>Perfil de WhatsApp</h2>
+      <p style={{ margin: "0 0 20px", fontSize: 13, color: MT }}>Cambia la foto de perfil que ven tus clientes en WhatsApp.</p>
+      <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+        {/* Avatar */}
+        <div
+          onClick={() => fileRef.current?.click()}
+          style={{ width: 96, height: 96, borderRadius: "50%", background: currentPic ? "transparent" : "#25D366", border: `3px dashed ${preview ? BL : BD}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, position: "relative", transition: "border-color 0.2s" }}
+          title="Haz clic para cambiar la foto"
+        >
+          {currentPic
+            ? <img src={currentPic} alt="Perfil" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <span style={{ fontSize: 36 }}>💬</span>
+          }
+          <div style={{ position: "absolute", bottom: 0, right: 0, background: BL, borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>✏️</div>
+        </div>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png" style={{ display: "none" }} onChange={onFile} />
+
+        <div style={{ flex: 1 }}>
+          {preview && (
+            <div style={{ background: BLL, border: `1px solid #BFDBFE`, borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: BL }}>
+              Nueva foto seleccionada. Haz clic en Guardar para aplicarla.
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button onClick={() => fileRef.current?.click()} style={{ padding: "9px 18px", background: SL, border: `1.5px solid ${BD}`, borderRadius: 10, fontSize: 13, fontWeight: 600, color: TX, cursor: "pointer" }}>
+              🖼️ Elegir foto
+            </button>
+            {preview && (
+              <>
+                <button onClick={savePhoto} disabled={uploading} style={{ padding: "9px 20px", background: GR, color: WH, border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: uploading ? "wait" : "pointer", opacity: uploading ? 0.7 : 1 }}>
+                  {uploading ? "⏳ Subiendo..." : "💾 Guardar foto"}
+                </button>
+                <button onClick={() => { setPreview(null); setImgData(null); }} style={{ padding: "9px 14px", background: RDL, color: RD, border: "none", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>
+                  ✕ Cancelar
+                </button>
+              </>
+            )}
+          </div>
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: MT }}>JPG o PNG · Máx. 5 MB · Recomendado: 640×640 px</p>
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export default function ConexionesPage() {
   const [bot, setBot] = useState(null);
@@ -156,7 +254,6 @@ export default function ConexionesPage() {
         <p style={{ margin: "6px 0 0", color: MT, fontSize: 14 }}>Gestiona las integraciones de tu bot con plataformas externas.</p>
       </div>
 
-      {/* WhatsApp card */}
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
           <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
@@ -197,7 +294,8 @@ export default function ConexionesPage() {
         )}
       </Card>
 
-      {/* Future integrations placeholder */}
+      <WaProfileCard connected={!!bot?.phoneNumberId} />
+
       <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
         {[
           { icon: "📅", name: "Google Calendar", desc: "Sincroniza citas automáticamente", soon: true },
