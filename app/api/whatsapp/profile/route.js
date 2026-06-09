@@ -22,82 +22,46 @@ export async function POST(req) {
   const imageBuffer = Buffer.from(imageBase64, "base64");
 
   // Step 1: Create resumable upload session
-  const sessionRes = await fetch(
-    `https://graph.facebook.com/v19.0/${phoneNumberId}/uploads?file_length=${imageBuffer.length}&file_type=${mimeType}&file_name=profile.jpg`,
+  const sessionUrl = `https://graph.facebook.com/v19.0/${phoneNumberId}/uploads?file_length=${imageBuffer.length}&file_type=${encodeURIComponent(mimeType)}&file_name=profile.jpg`;
+  const sessionRes = await fetch(sessionUrl,
     { method: "POST", headers: { Authorization: `Bearer ${token}` } }
   );
   const sessionData = await sessionRes.json();
   if (!sessionRes.ok) {
-    console.error("Upload session error:", JSON.stringify(sessionData));
-    // Fallback: try the messaging media endpoint
-    return uploadViaMessagingMedia(phoneNumberId, token, imageBuffer, mimeType);
+    const errMsg = sessionData.error?.message || JSON.stringify(sessionData);
+    const errCode = sessionData.error?.code || "";
+    return Response.json({ error: `[session ${errCode}] ${errMsg}` }, { status: 400 });
   }
 
-  // Step 2: Upload file bytes to the resumable session
+  // Step 2: Upload file bytes
   const uploadRes = await fetch(
     `https://rupload.facebook.com/whatsapp-business-media/${sessionData.id}`,
     {
       method: "POST",
-      headers: {
-        Authorization: `OAuth ${token}`,
-        "file_offset": "0",
-        "Content-Type": mimeType,
-      },
+      headers: { Authorization: `OAuth ${token}`, "file_offset": "0", "Content-Type": mimeType },
       body: imageBuffer,
     }
   );
   const uploadData = await uploadRes.json();
-  if (!uploadRes.ok) {
-    console.error("File upload error:", JSON.stringify(uploadData));
-    return Response.json({ error: `[subir] ${uploadData.error?.message || "Error al subir imagen"}` }, { status: 400 });
+  if (!uploadRes.ok || !uploadData.h) {
+    const errMsg = uploadData.error?.message || JSON.stringify(uploadData);
+    return Response.json({ error: `[upload] ${errMsg}` }, { status: 400 });
   }
 
-  // Step 3: Set profile picture using the handle
-  const handle = uploadData.h;
+  // Step 3: Set profile picture
   const profileRes = await fetch(
     `https://graph.facebook.com/v19.0/${phoneNumberId}/whatsapp_business_profile`,
     {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", profile_picture_handle: handle }),
+      body: JSON.stringify({ messaging_product: "whatsapp", profile_picture_handle: uploadData.h }),
     }
   );
   const profileData = await profileRes.json();
   if (!profileRes.ok) {
-    console.error("Profile update error:", JSON.stringify(profileData));
-    return Response.json({ error: `[perfil] ${profileData.error?.message || "Error al actualizar perfil"}` }, { status: 400 });
-  }
-
-  return Response.json({ success: true });
-}
-
-async function uploadViaMessagingMedia(phoneNumberId, token, imageBuffer, mimeType) {
-  const formData = new FormData();
-  const blob = new Blob([imageBuffer], { type: mimeType });
-  formData.append("file", blob, "profile.jpg");
-  formData.append("messaging_product", "whatsapp");
-  formData.append("type", "image");
-
-  const uploadRes = await fetch(
-    `https://graph.facebook.com/v19.0/${phoneNumberId}/media`,
-    { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData }
-  );
-  const uploadData = await uploadRes.json();
-  if (!uploadRes.ok) {
-    return Response.json({ error: `[media] ${uploadData.error?.message || "Error al subir imagen"}` }, { status: 400 });
-  }
-
-  const profileRes = await fetch(
-    `https://graph.facebook.com/v19.0/${phoneNumberId}/whatsapp_business_profile`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", profile_picture_handle: uploadData.id }),
-    }
-  );
-  const profileData = await profileRes.json();
-  if (!profileRes.ok) {
-    return Response.json({ error: `[perfil2] ${profileData.error?.message || "Error al actualizar perfil"}` }, { status: 400 });
+    const errMsg = profileData.error?.message || JSON.stringify(profileData);
+    const errCode = profileData.error?.code || "";
+    return Response.json({ error: `[perfil ${errCode}] ${errMsg}` }, { status: 400 });
   }
 
   return Response.json({ success: true });
