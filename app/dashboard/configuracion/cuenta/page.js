@@ -74,7 +74,7 @@ function SaveBtn({ loading, saved, onClick, label = "Guardar cambios" }) {
 
 export default function CuentaPage() {
   const { data: session } = useSession();
-  const [biz, setBiz] = useState({ businessName: "", website: "", faviconBase64: "", faviconMimeType: "" });
+  const [biz, setBiz] = useState({ businessName: "", siteName: "", website: "", faviconBase64: "", faviconMimeType: "" });
   const [user, setUser] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [plan, setPlan] = useState(null);
   const [savingBiz, setSavingBiz] = useState(false), [savedBiz, setSavedBiz] = useState(false);
@@ -87,7 +87,7 @@ export default function CuentaPage() {
     if (!session) return;
     setUser(u => ({ ...u, name: session.user?.name || "", email: session.user?.email || "" }));
     fetch("/api/config").then(r => r.json()).then(cfg => {
-      setBiz({ businessName: cfg.businessName || "", website: cfg.website || "", faviconBase64: cfg.faviconBase64 || "", faviconMimeType: cfg.faviconMimeType || "" });
+      setBiz({ businessName: cfg.businessName || "", siteName: cfg.siteName || "", website: cfg.website || "", faviconBase64: cfg.faviconBase64 || "", faviconMimeType: cfg.faviconMimeType || "" });
       if (cfg.faviconBase64) setLogoPreview(`data:${cfg.faviconMimeType || "image/png"};base64,${cfg.faviconBase64}`);
     });
     fetch("/api/subscription").then(r => r.json()).then(d => { setPlan(d); setLoadingPlan(false); });
@@ -109,7 +109,7 @@ export default function CuentaPage() {
 
   async function saveBiz() {
     setSavingBiz(true); setSavedBiz(false);
-    await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessName: biz.businessName, website: biz.website, faviconBase64: biz.faviconBase64, faviconMimeType: biz.faviconMimeType }) });
+    await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessName: biz.businessName, siteName: biz.siteName || biz.businessName, website: biz.website, faviconBase64: biz.faviconBase64, faviconMimeType: biz.faviconMimeType }) });
     setSavingBiz(false); setSavedBiz(true); setTimeout(() => setSavedBiz(false), 3000);
   }
 
@@ -155,6 +155,9 @@ export default function CuentaPage() {
               <div style={{ flex: 1 }}>
                 <Field label="Nombre del negocio">
                   <Input value={biz.businessName} onChange={e => setBiz(b => ({ ...b, businessName: e.target.value }))} placeholder="Ej: Mi Empresa S.A." />
+                </Field>
+                <Field label="Nombre de la app / plataforma" hint="Aparece en el navegador y en el sidebar.">
+                  <Input value={biz.siteName} onChange={e => setBiz(b => ({ ...b, siteName: e.target.value }))} placeholder="Ej: Agentflow" />
                 </Field>
                 <Field label="Sitio web">
                   <Input value={biz.website} onChange={e => setBiz(b => ({ ...b, website: e.target.value }))} placeholder="https://miempresa.com" />

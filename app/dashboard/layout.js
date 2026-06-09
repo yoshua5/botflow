@@ -55,6 +55,10 @@ function Sidebar({ collapsed }) {
 
   // Fetch real subscription plan from server
   const [planName, setPlanName] = useState("...");
+  const [siteName, setSiteName] = useState("");
+  useEffect(() => {
+    fetch("/api/config").then(r=>r.json()).then(c=>{ if(c.siteName) setSiteName(c.siteName); }).catch(()=>{});
+  }, []);
   useEffect(() => {
     if (!session) return;
     fetch("/api/subscription")
@@ -88,7 +92,7 @@ function Sidebar({ collapsed }) {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: BLUE, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>💬</div>
           {!collapsed && (
             <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: TEXT, letterSpacing: "-0.02em", lineHeight: 1.1 }}>Bot<span style={{ color: BLUE }}>flow</span></div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: TEXT, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{siteName || "Bot"}<span style={{ color: BLUE }}>{siteName ? "" : "flow"}</span></div>
               <div style={{ fontSize: 10, fontWeight: 700, color: planColor, letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 2 }}>
                 {planName}
               </div>
