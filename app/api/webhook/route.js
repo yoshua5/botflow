@@ -386,15 +386,20 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     { field_key: "motivo",         question: "¿Cuál es el motivo de la cita?",        required: false, field_order: 4 },
   ];
 
-  // Get current conversation state — use limit(1) to avoid maybeSingle error on duplicates
-  const { data: convRow } = await db
-    .from("conversations")
-    .select("appointment_state")
-    .eq("user_id", userId)
-    .eq("from_phone", from)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Get current conversation state — prioritize rows where appointment_state IS NOT NULL
+  // (multiple rows exist per phone due to bot_id variations; newest row may have null state)
+  let convRow = null;
+  {
+    const { data: activeRow } = await db
+      .from("conversations")
+      .select("appointment_state")
+      .eq("user_id", userId)
+      .eq("from_phone", from)
+      .not("appointment_state", "is", null)
+      .limit(1)
+      .maybeSingle();
+    convRow = activeRow || null;
+  }
 
   const state = convRow?.appointment_state;
 
@@ -422,7 +427,7 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     if (nextIdx < fields.length) {
       const nextField = fields[nextIdx];
       await db.from("conversations")
-        .update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg } })
+        .update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg }, updated_at: new Date().toISOString() })
         .eq("user_id", userId).eq("from_phone", from);
       await sendWhatsAppText(from, buildFieldQuestion(nextField, availCfg), config);
     } else {
@@ -483,7 +488,7 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
       .select("id").eq("user_id", userId).eq("from_phone", from).limit(1).maybeSingle();
     if (existingConv) {
       await db.from("conversations")
-        .update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg } })
+        .update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg }, updated_at: new Date().toISOString() })
         .eq("user_id", userId).eq("from_phone", from);
     } else {
       await db.from("conversations").insert({
