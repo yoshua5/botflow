@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { icon: "▦",  label: "Dashboard",    href: "/dashboard" },
   { icon: "🤖", label: "My Bots",      href: "/dashboard/bots" },
   { icon: "📊", label: "Analytics",    href: "/dashboard/analytics" },
+  { icon: "📅", label: "Citas",        href: "/dashboard/citas" },
   { icon: "👥", label: "Contactos",    href: "/dashboard/contactos" },
 ];
 

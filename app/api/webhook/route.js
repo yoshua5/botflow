@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUserIdByPhone, getBotIdByPhone, getPhoneMappingHmac, getConfig, getBots, getAllKBText, getKBImages, getKBImageData, trackMessage, getConversation, setConversation } from "@/lib/storage";
+import { createClient } from "@supabase/supabase-js";
+function supabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
 import { verifyMetaSignature, verifyOwnershipHmac } from "@/lib/webhookAuth";
 
 // Lazy imports — loaded only when POST handler actually needs them.
@@ -94,6 +96,7 @@ export async function POST(request) {
     }
 
     const from      = message.from;
+    const contactName = body.entry?.[0]?.changes?.[0]?.value?.contacts?.[0]?.profile?.name || null;
     const baseConfig = await getConfig(userId);
 
     // ── Find the specific bot for this phone number ────────
@@ -161,6 +164,11 @@ export async function POST(request) {
     } else {
       text = message.text.body;
     }
+
+    // ── Appointment flow ───────────────────────────────────────────────
+    const _apptHandled = await handleAppointmentFlow(text, from, userId, activeBot?.id || null, contactName || null, config);
+    if (_apptHandled) return NextResponse.json({ status: "ok" });
+    // ───────────────────────────────────────────────────────────────────
 
     const knowledge      = await getAllKBText(userId);
     const kbImages       = await getKBImages(userId);
@@ -281,6 +289,84 @@ export async function POST(request) {
     console.error("Webhook error:", err);
     return NextResponse.json({ status: "error" }, { status: 500 });
   }
+}
+
+
+// ── Appointment flow handler ─────────────────────────────────────────────────
+const APPT_INTENT = /\b(cita|citas|agendar|agenda|reservar|reserva|turno|quiero una cita|quiero un turno|quiero agendar|necesito una cita|necesito un turno|quiero una reserva|appointment|booking)\b/i;
+
+async function handleAppointmentFlow(text, from, userId, botId, contactName, config) {
+  const db = supabase();
+
+  // Get current state from conversations table
+  const { data: convRow } = await db
+    .from("conversations")
+    .select("appointment_state")
+    .eq("user_id", userId)
+    .eq("from_phone", from)
+    .maybeSingle();
+
+  const state = convRow?.appointment_state;
+
+  // ── Mid-collection: we already started asking questions ──────────────
+  if (state?.collecting) {
+    const { fields, currentIdx, data } = state;
+    const field = fields[currentIdx];
+
+    // Save the user's answer for the current field
+    const newData = { ...data, [field.field_key]: text.trim() };
+
+    const nextIdx = currentIdx + 1;
+
+    if (nextIdx < fields.length) {
+      // Ask next question
+      const nextField = fields[nextIdx];
+      await db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData } })
+        .eq("user_id", userId).eq("from_phone", from);
+      await sendWhatsAppText(from, nextField.question, config);
+    } else {
+      // All fields collected — save appointment
+      await db.from("appointments").insert({
+        user_id:      userId,
+        bot_id:       botId,
+        from_phone:   from,
+        contact_name: contactName,
+        data:         newData,
+        status:       "pendiente",
+      });
+      // Clear appointment state
+      await db.from("conversations").update({ appointment_state: null })
+        .eq("user_id", userId).eq("from_phone", from);
+
+      await sendWhatsAppText(from, "¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nTe confirmaremos pronto. ¡Gracias! 😊", config);
+    }
+    return true; // handled — skip Claude
+  }
+
+  // ── Intent detection: user wants to schedule ────────────────────────
+  if (APPT_INTENT.test(text)) {
+    // Load fields config for this user
+    const { data: fieldsData } = await db
+      .from("appointment_fields")
+      .select("field_key, field_label, question, field_order, required")
+      .eq("user_id", userId)
+      .order("field_order", { ascending: true });
+
+    const fields = fieldsData && fieldsData.length > 0 ? fieldsData : null;
+    if (!fields || fields.length === 0) return false; // no fields configured — let Claude handle it
+
+    // Start collection
+    await db.from("conversations").upsert({
+      user_id:           userId,
+      from_phone:        from,
+      appointment_state: { collecting: true, fields, currentIdx: 0, data: {} },
+    }, { onConflict: "user_id,from_phone" });
+
+    await sendWhatsAppText(from, `¡Hola! Con gusto te ayudo a agendar tu cita 📋\n\n${fields[0].question}`, config);
+    return true; // handled
+  }
+
+  return false; // not an appointment message
 }
 
 async function callClaude(userMessage, config, knowledge = "", kbImages = [], history = [], availableSlots = null) {
