@@ -68,4 +68,6 @@ function getDefaultFields() {
     { id: "d2", field_key: "telefono", field_label: "Teléfono",          question: "¿Cuál es tu número de teléfono?",       field_order: 1, required: true },
     { id: "d3", field_key: "fecha_deseada", field_label: "Fecha deseada",     question: "¿Qué fecha te gustaría para la cita?",  field_order: 2, required: true },
     { id: "d4", field_key: "hora_deseada",  field_label: "Hora deseada",      question: "¿A qué hora te gustaría la cita?",      field_order: 3, required: true },
-    { id: "d5", field_key: "motivo",   field_label: "Motivo de la cita", question: "¿Cuál es el motivo de la cita?",       field_order: 4, required: fals
+    { id: "d5", field_key: "motivo",   field_label: "Motivo de la cita", question: "¿Cuál es el motivo de la cita?",       field_order: 4, required: false },
+  ];
+}
