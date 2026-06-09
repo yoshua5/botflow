@@ -300,6 +300,80 @@ export async function POST(request) {
 // ── Appointment flow handler ─────────────────────────────────────────────────
 const APPT_INTENT = /\b(cita|citas|agendar|agenda|reservar|reserva|turno|quiero una cita|quiero un turno|quiero agendar|necesito una cita|necesito un turno|quiero una reserva|appointment|booking)\b/i;
 
+// ── Availability helpers ────────────────────────────────────────────────
+function getAvailableDates(availCfg, numDays = 14) {
+  const allowedDays = availCfg?.available_days || [1,2,3,4,5];
+  const dates = [];
+  const DAY_ES = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  const MONTH_ES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const now = new Date();
+  // Start from tomorrow
+  for (let i = 1; i <= 30 && dates.length < numDays; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    if (allowedDays.includes(d.getDay())) {
+      dates.push({
+        label: `${DAY_ES[d.getDay()]} ${d.getDate()} de ${MONTH_ES[d.getMonth()]}`,
+        iso:   `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`,
+      });
+    }
+  }
+  return dates;
+}
+
+function getAvailableSlots(availCfg) {
+  const start = availCfg?.start_time || "09:00";
+  const end   = availCfg?.end_time   || "18:00";
+  const mins  = availCfg?.slot_minutes || 60;
+  const [sh,sm] = start.split(":").map(Number);
+  const [eh,em] = end.split(":").map(Number);
+  const startM = sh*60+sm, endM = eh*60+em;
+  const slots = [];
+  for (let m = startM; m < endM; m += mins) {
+    const h = Math.floor(m/60), mi = m%60;
+    const suffix = h < 12 ? "AM" : "PM";
+    const h12 = h === 0 ? 12 : h > 12 ? h-12 : h;
+    slots.push(`${h12}:${String(mi).padStart(2,"0")} ${suffix}`);
+  }
+  return slots;
+}
+
+function isDateField(key) { return /fecha|date|dia|día/i.test(key); }
+function isTimeField(key) { return /hora|time|horario/i.test(key); }
+
+function buildFieldQuestion(field, availCfg) {
+  const key = field.field_key || "";
+  if (isDateField(key)) {
+    const dates = getAvailableDates(availCfg);
+    if (dates.length === 0) return field.question;
+    const list = dates.slice(0,10).map((d,i) => `  ${i+1}. ${d.label}`).join("\n");
+    return `${field.question}\n\n📅 *Fechas disponibles:*\n${list}\n\nResponde con el número o escribe la fecha.`;
+  }
+  if (isTimeField(key)) {
+    const slots = getAvailableSlots(availCfg);
+    if (slots.length === 0) return field.question;
+    const list = slots.map((s,i) => `  ${i+1}. ${s}`).join("\n");
+    return `${field.question}\n\n🕐 *Horarios disponibles:*\n${list}\n\nResponde con el número o escribe la hora.`;
+  }
+  return field.question;
+}
+
+function resolveAnswer(text, field, availCfg) {
+  const key = field.field_key || "";
+  const num = parseInt(text.trim(), 10);
+  if (!isNaN(num) && num >= 1) {
+    if (isDateField(key)) {
+      const dates = getAvailableDates(availCfg);
+      if (dates[num-1]) return dates[num-1].label;
+    }
+    if (isTimeField(key)) {
+      const slots = getAvailableSlots(availCfg);
+      if (slots[num-1]) return slots[num-1];
+    }
+  }
+  return text.trim();
+}
+
 async function handleAppointmentFlow(text, from, userId, botId, contactName, config) {
   const db = supabase();
 
@@ -326,25 +400,25 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
 
   // ── Mid-collection: we already started asking questions ──────────────
   if (state?.collecting) {
-    const { fields, currentIdx, data } = state;
+    const { fields, currentIdx, data, availCfg } = state;
     const field = fields[currentIdx];
     if (!field) {
-      // Corrupted state — reset
       await db.from("conversations").update({ appointment_state: null })
         .eq("user_id", userId).eq("from_phone", from);
       return false;
     }
 
-    const newData = { ...data, [field.field_key]: text.trim() };
+    // Resolve numbered answer back to actual date/time label if needed
+    const answer = resolveAnswer(text, field, availCfg);
+    const newData = { ...data, [field.field_key]: answer };
     const nextIdx = currentIdx + 1;
 
     if (nextIdx < fields.length) {
-      // Ask next question
       const nextField = fields[nextIdx];
       await db.from("conversations")
-        .update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData } })
+        .update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg } })
         .eq("user_id", userId).eq("from_phone", from);
-      await sendWhatsAppText(from, nextField.question, config);
+      await sendWhatsAppText(from, buildFieldQuestion(nextField, availCfg), config);
     } else {
       // All fields collected — save appointment
       await db.from("appointments").insert({
@@ -386,21 +460,28 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
 
     const fields = (fieldsData && fieldsData.length > 0) ? fieldsData : DEFAULT_FIELDS;
 
+    // Load availability config to show date/time options
+    let availCfg = null;
+    try {
+      const { data: ac } = await db.from("appointment_config").select("*").eq("user_id", userId).maybeSingle();
+      availCfg = ac || null;
+    } catch (_) {}
+
     // Set appointment state on existing conversation row (or insert new)
     const { data: existingConv } = await db.from("conversations")
       .select("id").eq("user_id", userId).eq("from_phone", from).limit(1).maybeSingle();
     if (existingConv) {
       await db.from("conversations")
-        .update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {} } })
+        .update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg } })
         .eq("user_id", userId).eq("from_phone", from);
     } else {
       await db.from("conversations").insert({
         user_id: userId, bot_id: botId, from_phone: from,
-        appointment_state: { collecting: true, fields, currentIdx: 0, data: {} },
+        appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg },
       });
     }
 
-    await sendWhatsAppText(from, `¡Con gusto te ayudo a agendar tu cita! 📋\n\n${fields[0].question}`, config);
+    await sendWhatsAppText(from, `¡Con gusto te ayudo a agendar tu cita! 📋\n\n${buildFieldQuestion(fields[0], availCfg)}`, config);
     return true;
   }
 
