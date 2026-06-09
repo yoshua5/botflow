@@ -386,389 +386,118 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     { field_key: "motivo",         question: "¿Cuál es el motivo de la cita?",        required: false, field_order: 4 },
   ];
 
-  // Read appointment session from dedicated table — no bot_id/NULL ambiguity
-  const { data: _apptSession } = await db
+  // Read from dedicated appointment_sessions table — unique (user_id, from_phone) PK,
+  // no bot_id / NULL ambiguity issues that plagued the conversations table approach.
+  const { data: _apptSess } = await db
     .from("appointment_sessions")
     .select("state")
     .eq("user_id", userId)
     .eq("from_phone", from)
     .maybeSingle();
-  const state = _apptSession?.state || null;
-  console.log(`📋 appt [${from}] idx=${state?.currentIdx ?? "none"} data=${JSON.stringify(Object.keys(state?.data || {}))}`); getUserIdByPhone, getBotIdByPhone, getPhoneMappingHmac, getConfig, getBots, getAllKBText, getKBImages, getKBImageData, trackMessage, getConversation, setConversation } from "@/lib/storage";
-import { createClient } from "@supabase/supabase-js";
-function supabase() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
-import { verifyMetaSignature, verifyOwnershipHmac } from "@/lib/webhookAuth";
+  const state = _apptSess?.state || null;
+  console.log(`📋 appt [${from}] idx=${state?.currentIdx ?? "none"} data=${JSON.stringify(Object.keys(state?.data || {}))}`);
 
-// Lazy imports — loaded only when POST handler actually needs them.
-// This ensures the GET (webhook verification) handler works even if
-// Google/booking modules fail to initialize (e.g. missing credentials).
-async function getAvailableSlots(...args) {
-  const { getAvailableSlots: fn } = await import("@/lib/google");
-  return fn(...args);
-}
-async function bookAppointment(...args) {
-  const { bookAppointment: fn } = await import("@/lib/bookAppointment");
-  return fn(...args);
-}
-
-// ── GET: WhatsApp webhook verification ───────────────────────
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const mode      = searchParams.get("hub.mode");
-  const token     = searchParams.get("hub.verify_token");
-  const challenge = searchParams.get("hub.challenge");
-
-  // Accept either WA_VERIFY_TOKEN or WEBHOOK_SECRET as the verify token
-  const verifyToken = process.env.WA_VERIFY_TOKEN || process.env.WEBHOOK_SECRET;
-  if (!verifyToken) {
-    console.error("❌ No verify token set. Add WA_VERIFY_TOKEN to env vars.");
-    return new Response("Server misconfiguration", { status: 500 });
+  // ── If user re-triggers intent while mid-flow, restart fresh ────────
+  if (state?.collecting && APPT_INTENT.test(text)) {
+    await db.from("appointment_sessions").delete().eq("user_id", userId).eq("from_phone", from);
+    // Fall through to intent detection below (state is now cleared in DB)
   }
-
-  const headers = { "Content-Type": "text/plain" };
-  if (mode === "subscribe" && token === verifyToken) {
-    console.log("✅ Webhook verificado");
-    return new Response(challenge, { status: 200, headers });
-  }
-  console.warn(`⚠️ Webhook verification failed. mode=${mode}, expected=${verifyToken}, got=${token}`);
-  return new Response("Token incorrecto", { status: 403, headers });
-}
-
-// ── POST: Receive & reply to WhatsApp messages ────────────────
-export async function POST(request) {
-  // Read raw body first (needed for Meta signature verification)
-  const rawBody = await request.text();
-  const signatureHeader = request.headers.get("x-hub-signature-256");
-
-  // ── 1. Verify Meta signature ─────────────────────────────
-  if (!verifyMetaSignature(rawBody, signatureHeader)) {
-    console.error("❌ Meta signature verification failed — rejecting request");
-    return new Response("Unauthorized", { status: 403 });
-  }
-
-  let body;
-  try {
-    body = JSON.parse(rawBody);
-  } catch {
-    return new Response("Bad Request", { status: 400 });
-  }
-
-  try {
-    const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-
-    // Accept text, audio, and interactive (button/list clicks)
-    const isText        = message?.type === "text";
-    const isAudio       = message?.type === "audio";
-    const isInteractive = message?.type === "interactive";
-    if (!message || (!isText && !isAudio && !isInteractive)) return NextResponse.json({ status: "ok" });
-
-    const metadata = body.entry?.[0]?.changes?.[0]?.value?.metadata;
-    const phoneId = metadata?.phone_number_id;
-    if (!phoneId) return NextResponse.json({ status: "ok" });
-
-    let userId = await getUserIdByPhone(phoneId);
-    let skipOwnershipCheck = false;
-
-    if (!userId) {
-      // Fall back to env-var config when phone matches the default number
-      if (process.env.WA_PHONE_NUMBER_ID && phoneId === process.env.WA_PHONE_NUMBER_ID) {
-        userId = "default";
-        skipOwnershipCheck = true; // env-var default doesn't have a DB row to check
-        console.log("ℹ️ Using env-var config for phoneId:", phoneId);
-      } else {
-        console.error("❌ No user mapped for phoneId:", phoneId);
-        return NextResponse.json({ status: "ok" });
-      }
+  // ── Mid-collection: we already started asking questions ──────────────
+  else if (state?.collecting) {
+    const { fields, currentIdx, data, availCfg } = state;
+    const field = fields[currentIdx];
+    if (!field) {
+      await db.from("appointment_sessions").delete().eq("user_id", userId).eq("from_phone", from);
+      return false;
     }
 
-    // ── 2. Verify webhook ownership ──────────────────────────
-    if (!skipOwnershipCheck) {
-      const storedHmac = await getPhoneMappingHmac(phoneId);
-      if (!verifyOwnershipHmac(phoneId, userId, storedHmac)) {
-        console.error(`❌ Ownership HMAC mismatch for phoneId=${phoneId} userId=${userId} — possible hijack attempt`);
-        return NextResponse.json({ status: "ok" });
-      }
-    }
+    // Resolve numbered answer back to actual date/time label if needed
+    const answer = resolveAnswer(text, field, availCfg);
+    const newData = { ...data, [field.field_key]: answer };
+    const nextIdx = currentIdx + 1;
 
-    const from      = message.from;
-    const contactName = body.entry?.[0]?.changes?.[0]?.value?.contacts?.[0]?.profile?.name || null;
-    const baseConfig = await getConfig(userId);
-
-    // ── Find the specific bot for this phone number ────────
-    const bots  = await getBots(userId);
-    const botId = await getBotIdByPhone(phoneId);
-    const activeBot = (botId ? bots.find(b => b.id === botId) : null)
-      || bots.find(b => b.phoneNumberId === phoneId)
-      || bots.find(b => b.status !== "INACTIVO")
-      || bots[0];
-
-    if (activeBot && activeBot.status === "INACTIVO") {
-      console.log(`⏸️ Bot inactivo, ignorando mensaje de ${from}`);
-      return NextResponse.json({ status: "ok" });
-    }
-
-    const GENERIC_DEFAULTS = ["Asistente", "Assistant", "Mi Bot", "My Bot", "Bot", ""];
-    const config = { ...activeBot };
-    for (const [k, v] of Object.entries(baseConfig)) {
-      if (v !== undefined && v !== null) config[k] = v;
-    }
-    if (GENERIC_DEFAULTS.includes(config.agentName || "")) {
-      config.agentName = activeBot?.agentName || activeBot?.name || config.agentName;
-    }
-    if (!config.flow && activeBot?.flow) config.flow = activeBot.flow;
-    if (activeBot) console.log(`🤖 Bot: ${config.agentName} / ${config.businessName} (id: ${activeBot.id})`);
-
-    if (!config.accessToken || !config.phoneNumberId || !config.anthropicKey) {
-      console.error("❌ Faltan credenciales");
-      return NextResponse.json({ status: "error: missing config" });
-    }
-
-    // ── Resolve user message text ──────────────────────────
-    let text;
-    let transcribedNote = "";
-
-    if (isAudio) {
-      const mediaId = message.audio?.id;
-      console.log(`🎤 Nota de voz recibida, media_id: ${mediaId}`);
-      const openaiKey = config.openaiKey;
-      if (!openaiKey) {
-        await sendWhatsAppText(from, "Lo siento, la función de notas de voz no está configurada aún. Por favor escríbeme tu mensaje. 🙏", config);
-        return NextResponse.json({ status: "ok" });
-      }
-      text = await transcribeWhatsAppAudio(mediaId, config, openaiKey);
-      if (!text) {
-        await sendWhatsAppText(from, "No pude entender el audio. ¿Puedes escribirme tu mensaje? 😊", config);
-        return NextResponse.json({ status: "ok" });
-      }
-      console.log(`🎤 Transcripción: "${text}"`);
-      transcribedNote = `🎤 _"${text}"_\n\n`;
-    } else if (isInteractive) {
-      const btnReply  = message.interactive?.button_reply;
-      const listReply = message.interactive?.list_reply;
-      const selected  = btnReply || listReply;
-      text = selected?.title || selected?.id || "opción seleccionada";
-      console.log(`🔘 Opción seleccionada: "${text}" (id: ${selected?.id})`);
-
-      const flow = config.flow || activeBot?.flow;
-      if (flow?.menuItems) {
-        const matched = flow.menuItems.find(it => it.id === selected?.id || it.title === text);
-        if (matched?.response) {
-          text = `[El usuario seleccionó: "${text}"] ${matched.response}`;
-        }
-      }
-    } else {
-      text = message.text.body;
-    }
-
-    // ── Appointment flow ───────────────────────────────────────────────
-    let _apptHandled = false;
-    try {
-      _apptHandled = await handleAppointmentFlow(text, from, userId, activeBot?.id || null, contactName || null, config);
-    } catch (apptErr) {
-      console.error("⚠️ Appointment flow error (continuing):", apptErr.message);
-    }
-    if (_apptHandled) return NextResponse.json({ status: "ok" });
-    // ───────────────────────────────────────────────────────────────────
-
-    const knowledge      = await getAllKBText(userId);
-    const kbImages       = await getKBImages(userId);
-    const history        = await getConversation(from, userId);
-    const availableSlots = config.appointments?.enabled && config.appointments?.calendarId && config.appointments?.googleCredentials
-      ? await getAvailableSlots(config.appointments).catch(() => null)
-      : null;
-
-    if (knowledge) console.log(`📚 KB: ${knowledge.length} chars`);
-    if (kbImages.length) console.log(`🖼️ Imágenes en KB: ${kbImages.length}`);
-    if (availableSlots) console.log(`📅 Slots disponibles en prompt`);
-
-    const aiReply = await callClaude(text, config, knowledge, kbImages, history, availableSlots);
-
-    const updatedHistory = [
-      ...history,
-      { role: "user", content: text },
-      { role: "assistant", content: aiReply },
-    ];
-    setConversation(from, updatedHistory, userId).catch(() => {});
-
-    // Parse [BOOK_APPOINTMENT:{...}] marker
-    let cleanReply = aiReply;
-    const bookStart = aiReply.indexOf("[BOOK_APPOINTMENT:");
-    if (bookStart !== -1) {
-      try {
-        const rest = aiReply.slice(bookStart + "[BOOK_APPOINTMENT:".length);
-        let braceDepth = 0, jsonEnd = -1;
-        for (let i = 0; i < rest.length; i++) {
-          if (rest[i] === "{") braceDepth++;
-          else if (rest[i] === "}") { braceDepth--; if (braceDepth === 0) { jsonEnd = i; break; } }
-        }
-        if (jsonEnd !== -1) {
-          const jsonStr = rest.slice(0, jsonEnd + 1);
-          const appointmentData = JSON.parse(jsonStr);
-          console.log("📅 Booking appointment:", JSON.stringify(appointmentData));
-          const waConfig = { accessToken: config.accessToken, phoneNumberId: config.phoneNumberId };
-          bookAppointment(appointmentData, from, config.appointments || {}, waConfig)
-            .then(r => console.log(`📅 Booking result: cal=${r.results.calendar} sheets=${r.results.sheets} wa=${r.results.whatsapp}`))
-            .catch(err => console.error("❌ Appointment booking error:", err.message));
-          cleanReply = aiReply.slice(0, bookStart) + aiReply.slice(bookStart + "[BOOK_APPOINTMENT:".length + jsonEnd + 2);
-        }
-      } catch (err) {
-        console.error("Failed to parse [BOOK_APPOINTMENT]:", err.message);
-      }
-    }
-
-    // Parse [SEND_BOOKING_LINK] marker
-    const hasBookingLink = cleanReply.includes("[SEND_BOOKING_LINK]");
-    cleanReply = cleanReply.replace(/\[SEND_BOOKING_LINK\]/gi, "").trim();
-
-    // Parse [SEND_IMAGE:id] markers
-    const imageMarkerRegex = /\[SEND_IMAGE:([^\]]+)\]/gi;
-    const imageMarkers = [...cleanReply.matchAll(imageMarkerRegex)];
-    const cleanText = cleanReply.replace(imageMarkerRegex, "").trim();
-
-    const finalText = transcribedNote + cleanText;
-    if (finalText) await sendWhatsAppText(from, finalText, config);
-
-    // ── Send interactive menu if flow mode requires it ─────
-    const flow = config.flow || activeBot?.flow || baseConfig.flow;
-    const flowMode = flow?.mode || "text";
-    const isFirstMsg = history.length === 0;
-    const shouldShowMenu = !!(
-      flow?.menuItems?.length > 0 &&
-      (flowMode === "menu" || (flowMode === "hybrid" && isFirstMsg)) &&
-      !isInteractive
-    );
-    console.log(`🔀 flow mode: ${flowMode}, shouldShowMenu: ${shouldShowMenu}, items: ${flow?.menuItems?.length || 0}`);
-
-    if (shouldShowMenu) {
-      await sendWhatsAppMenu(from, flow, config);
-    }
-
-    // Send booking link if requested
-    if (hasBookingLink && config.appointments?.enabled) {
-      const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-        : process.env.NEXTAUTH_URL || "https://botflow-eight.vercel.app";
-      const bookingUrl = `${baseUrl}/booking?from=${encodeURIComponent(from)}`;
-      await sendWhatsAppText(from, `📅 Elige tu fecha y hora aquí:\n${bookingUrl}`, config);
-    }
-
-    // Send each image from Claude markers
-    for (const match of imageMarkers) {
-      const hint = match[1].toLowerCase().trim();
-      const img = kbImages.find(i =>
-        i.id === match[1].trim() ||
-        i.id.toLowerCase().includes(hint) ||
-        i.name.toLowerCase().includes(hint) ||
-        hint.includes(i.name.toLowerCase().replace(/\.[^.]+$/, ""))
+    if (nextIdx < fields.length) {
+      const nextField = fields[nextIdx];
+      const { error: updErr } = await db.from("appointment_sessions").upsert(
+        { user_id: userId, from_phone: from, state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg }, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,from_phone" }
       );
-      if (img) {
-        console.log(`🖼️ Enviando imagen: ${img.name}`);
-        await sendWhatsAppImage(from, img.id, img.name, config, userId);
+      if (updErr) console.error("❌ appt state update error:", JSON.stringify(updErr));
+      console.log(`💾 saved state [${from}] idx=${nextIdx} data=${JSON.stringify(Object.keys(newData))}`);
+      await sendWhatsAppText(from, buildFieldQuestion(nextField, availCfg), config);
+    } else {
+      // All fields collected — save appointment
+      const { error: apptInsertError } = await db.from("appointments").insert({
+        user_id:      userId,
+        bot_id:       botId || null,
+        from_phone:   from,
+        contact_name: contactName,
+        data:         newData,
+        status:       "pendiente",
+      });
+      if (apptInsertError) {
+        console.error("❌ appointments insert failed:", JSON.stringify(apptInsertError));
       } else {
-        console.warn(`⚠️ Imagen no encontrada para hint: ${hint}`);
+        console.log("✅ appointment saved for userId:", userId, "phone:", from);
       }
-    }
+      await db.from("appointment_sessions").delete().eq("user_id", userId).eq("from_phone", from);
 
-    // Fallback: if user asked for images but Claude didn't generate markers, send automatically
-    if (imageMarkers.length === 0 && kbImages.length > 0) {
-      const photoRequest = /\b(foto|fotos|imagen|imágenes|picture|photo|photos|muéstrame|mándame|envíame|ver|muestra|catálogo).*(foto|imagen|picture|photo)\b|\b(foto|fotos|imagen|imágenes|picture|photos)\b/i;
-      if (photoRequest.test(text)) {
-        console.log("⚠️ Fallback: usuario pidió fotos pero Claude no generó markers — enviando automáticamente");
-        for (const img of kbImages.slice(0, 3)) {
-          console.log(`🖼️ Fallback img: ${img.name}`);
-          await sendWhatsAppImage(from, img.id, img.name, config, userId);
+      // Build confirmation message with availability info if set
+      let confirmMsg = "¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nTe confirmaremos pronto. ¡Gracias! 😊";
+      try {
+        const { data: availCfg } = await db.from("appointment_config").select("*").eq("user_id", userId).maybeSingle();
+        if (availCfg) {
+          const DAY_NAMES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+          const days = (availCfg.available_days || []).map(d => DAY_NAMES[d]).join(", ");
+          confirmMsg = `¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nNuestro horario de atención es ${days} de ${availCfg.start_time} a ${availCfg.end_time}.`;
+          if (availCfg.notes) confirmMsg += `\n${availCfg.notes}`;
+          confirmMsg += "\n\nTe confirmaremos pronto. ¡Gracias! 😊";
         }
-      }
+      } catch (_) {}
+      await sendWhatsAppText(from, confirmMsg, config);
     }
-
-    const botName = config.agentName || config.businessName || "Bot";
-    const trackText = isAudio ? `🎤 ${text}` : text;
-    trackMessage(from, trackText, botName, userId).catch(() => {});
-    return NextResponse.json({ status: "ok" });
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return NextResponse.json({ status: "error" }, { status: 500 });
+    return true;
   }
-}
 
+  // ── Intent detection ────────────────────────────────────────────────
+  if (APPT_INTENT.test(text)) {
+    // Load fields from DB, fall back to defaults if none configured
+    const { data: fieldsData } = await db
+      .from("appointment_fields")
+      .select("field_key, field_label, question, field_order, required")
+      .eq("user_id", userId)
+      .order("field_order", { ascending: true });
 
-// ── Appointment flow handler ─────────────────────────────────────────────────
-const APPT_INTENT = /\b(cita|citas|agendar|agenda|reservar|reserva|turno|quiero una cita|quiero un turno|quiero agendar|necesito una cita|necesito un turno|quiero una reserva|appointment|booking)\b/i;
+    const fields = (fieldsData && fieldsData.length > 0) ? fieldsData : DEFAULT_FIELDS;
 
-// ── Availability helpers ────────────────────────────────────────────────
-function getAvailableDates(availCfg, numDays = 14) {
-  const allowedDays = availCfg?.available_days || [1,2,3,4,5];
-  const dates = [];
-  const DAY_ES = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-  const MONTH_ES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  const now = new Date();
-  // Start from tomorrow
-  for (let i = 1; i <= 30 && dates.length < numDays; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() + i);
-    if (allowedDays.includes(d.getDay())) {
-      dates.push({
-        label: `${DAY_ES[d.getDay()]} ${d.getDate()} de ${MONTH_ES[d.getMonth()]}`,
-        iso:   `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`,
+    // Load availability config to show date/time options
+    let availCfg = null;
+    try {
+      const { data: ac } = await db.from("appointment_config").select("*").eq("user_id", userId).maybeSingle();
+      availCfg = ac || null;
+    } catch (_) {}
+
+    // Set appointment state on existing conversation row (or insert new)
+    const { data: existingConv } = await db.from("conversations")
+      .select("id").eq("user_id", userId).eq("from_phone", from).limit(1).maybeSingle();
+    if (existingConv) {
+      await db.from("appointment_sessions").upsert(
+        { user_id: userId, from_phone: from, state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg }, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,from_phone" }
+      );
+    } else {
+      await db.from("conversations").insert({
+        user_id: userId, bot_id: botId, from_phone: from,
+        appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg },
       });
     }
+
+    await sendWhatsAppText(from, `¡Con gusto te ayudo a agendar tu cita! 📋\n\n${buildFieldQuestion(fields[0], availCfg)}`, config);
+    return true;
   }
-  return dates;
+
+  return false;
 }
-
-function getApptTimeSlots(availCfg) {
-  const start = availCfg?.start_time || "09:00";
-  const end   = availCfg?.end_time   || "18:00";
-  const mins  = availCfg?.slot_minutes || 60;
-  const [sh,sm] = start.split(":").map(Number);
-  const [eh,em] = end.split(":").map(Number);
-  const startM = sh*60+sm, endM = eh*60+em;
-  const slots = [];
-  for (let m = startM; m < endM; m += mins) {
-    const h = Math.floor(m/60), mi = m%60;
-    const suffix = h < 12 ? "AM" : "PM";
-    const h12 = h === 0 ? 12 : h > 12 ? h-12 : h;
-    slots.push(`${h12}:${String(mi).padStart(2,"0")} ${suffix}`);
-  }
-  return slots;
-}
-
-function isDateField(key) { return /fecha|date|dia|día/i.test(key); }
-function isTimeField(key) { return /hora|time|horario/i.test(key); }
-
-function buildFieldQuestion(field, availCfg) {
-  const key = field.field_key || "";
-  if (isDateField(key)) {
-    const dates = getAvailableDates(availCfg);
-    if (dates.length === 0) return field.question;
-    const list = dates.slice(0,10).map((d,i) => `  ${i+1}. ${d.label}`).join("\n");
-    return `${field.question}\n\n📅 *Fechas disponibles:*\n${list}\n\nResponde con el número o escribe la fecha.`;
-  }
-  if (isTimeField(key)) {
-    const slots = getApptTimeSlots(availCfg);
-    if (slots.length === 0) return field.question;
-    const list = slots.map((s,i) => `  ${i+1}. ${s}`).join("\n");
-    return `${field.question}\n\n🕐 *Horarios disponibles:*\n${list}\n\nResponde con el número o escribe la hora.`;
-  }
-  return field.question;
-}
-
-function resolveAnswer(text, field, availCfg) {
-  const key = field.field_key || "";
-  const num = parseInt(text.trim(), 10);
-  if (!isNaN(num) && num >= 1) {
-    if (isDateField(key)) {
-      const dates = getAvailableDates(availCfg);
-      if (dates[num-1]) return dates[num-1].label;
-    }
-    if (isTimeField(key)) {
-      const slots = getApptTimeSlots(availCfg);
-      if (slots[num-1]) return slots[num-1];
-    }
-  }
-  return text.trim();
-}
-
 
 async function callClaude(userMessage, config, knowledge = "", kbImages = [], history = [], availableSlots = null) {
   const rawAgent = config.agentName || "";
