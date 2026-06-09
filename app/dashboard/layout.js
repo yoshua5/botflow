@@ -37,13 +37,21 @@ const CATALOGOS_CHILDREN = [
   { icon: "🌐", label: "Desde Sitio Web", href: "/dashboard/catalogos/sitio-web" },
 ];
 
+const CONFIG_CHILDREN = [
+  { icon: "👤", label: "Cuenta",       href: "/dashboard/configuracion/cuenta" },
+  { icon: "🔌", label: "Conexiones",   href: "/dashboard/configuracion/conexiones" },
+  { icon: "🤖", label: "Agentes",      href: "/dashboard/configuracion/agentes" },
+];
+
 function Sidebar({ collapsed }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const email = session?.user?.email;
   const isSuperAdmin = email === "yoshualeisorek17@gmail.com";
   const isCatalogosActive = pathname.startsWith("/dashboard/catalogos");
+  const isConfigActive = pathname.startsWith("/dashboard/configuracion");
   const [catalogosOpen, setCatalogosOpen] = useState(isCatalogosActive);
+  const [configOpen, setConfigOpen] = useState(isConfigActive);
 
   // Fetch real subscription plan from server
   const [planName, setPlanName] = useState("...");
@@ -137,6 +145,51 @@ function Sidebar({ collapsed }) {
           {catalogosOpen && !collapsed && (
             <div style={{ paddingLeft: 16, display: "flex", flexDirection: "column", gap: 1, marginTop: 2 }}>
               {CATALOGOS_CHILDREN.map(child => {
+                const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
+                return (
+                  <a key={child.href} href={child.href} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "7px 10px", borderRadius: 8,
+                    background: childActive ? BLUE_LIGHT : "transparent",
+                    color: childActive ? BLUE : MUTED,
+                    textDecoration: "none", fontSize: 13,
+                    fontWeight: childActive ? 700 : 400,
+                    transition: "all 0.15s",
+                  }}
+                    onMouseEnter={e => { if (!childActive) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
+                    onMouseLeave={e => { if (!childActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}>
+                    <span style={{ fontSize: 14 }}>{child.icon}</span>
+                    <span>{child.label}</span>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Configuración dropdown */}
+        <div>
+          <button onClick={() => setConfigOpen(o => !o)} style={{
+            display: "flex", alignItems: "center", gap: 10, width: "100%",
+            padding: collapsed ? "10px" : "10px 12px",
+            borderRadius: 10, border: "none", cursor: "pointer",
+            background: isConfigActive ? BLUE_LIGHT : "transparent",
+            color: isConfigActive ? BLUE : MUTED,
+            fontWeight: isConfigActive ? 700 : 500,
+            fontSize: 14, transition: "all 0.15s",
+            justifyContent: collapsed ? "center" : "flex-start",
+          }}
+            onMouseEnter={e => { if (!isConfigActive) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
+            onMouseLeave={e => { if (!isConfigActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>⚙️</span>
+            {!collapsed && <>
+              <span style={{ flex: 1, textAlign: "left" }}>Configuración</span>
+              <span style={{ fontSize: 11, transition: "transform 0.2s", transform: configOpen ? "rotate(180deg)" : "none" }}>▾</span>
+            </>}
+          </button>
+          {configOpen && !collapsed && (
+            <div style={{ paddingLeft: 16, display: "flex", flexDirection: "column", gap: 1, marginTop: 2 }}>
+              {CONFIG_CHILDREN.map(child => {
                 const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
                 return (
                   <a key={child.href} href={child.href} style={{
