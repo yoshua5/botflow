@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 
 function db() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 const DEFAULTS = { available_days: [1,2,3,4,5], start_time: "09:00", end_time: "18:00", slot_minutes: 60, notes: "" };

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUserIdByPhone, getBotIdByPhone, getPhoneMappingHmac, getConfig, getBots, getAllKBText, getKBImages, getKBImageData, trackMessage, getConversation, setConversation } from "@/lib/storage";
 import { createClient } from "@supabase/supabase-js";
-function supabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
+function supabase() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); }
 import { verifyMetaSignature, verifyOwnershipHmac } from "@/lib/webhookAuth";
 
 // Lazy imports — loaded only when POST handler actually needs them.
