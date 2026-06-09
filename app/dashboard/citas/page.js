@@ -72,6 +72,8 @@ export default function CitasPage() {
   const [loadingA,setLoadingA] = useState(false);
   const [search,setSearch]   = useState("");
   const [statusFilter,setStatusFilter] = useState("all");
+  const [cancelModal,setCancelModal]   = useState(null);
+  const [notifying,setNotifying]       = useState(null);
 
   // Load fields + availability on mount
   useEffect(()=>{
@@ -124,9 +126,26 @@ export default function CitasPage() {
   }
 
   // ── Appointment actions ──────────────────────────────────────────
-  async function updateStatus(id,status){
-    await fetch("/api/citas",{ method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status}) });
-    setAppointments(prev=>prev.map(a=>a.id===id?{...a,status}:a));
+  async function updateStatus(id, status, cancel_reason) {
+    if (status === "cancelada" && !cancel_reason) {
+      setCancelModal({ id, reason: "" });
+      return;
+    }
+    setNotifying(id);
+    try {
+      await fetch(`/api/citas/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, cancel_reason }),
+      });
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    } catch(e) { alert("Error: " + e.message); }
+    setNotifying(null);
+  }
+  async function confirmCancel() {
+    if (!cancelModal) return;
+    await updateStatus(cancelModal.id, "cancelada", cancelModal.reason);
+    setCancelModal(null);
   }
   async function deleteAppt(id){
     if(!confirm("¿Eliminar esta cita?")) return;
@@ -148,8 +167,32 @@ export default function CitasPage() {
   });
   const pendingCount=appointments.filter(a=>a.status==="pendiente").length;
 
+  // ── Cancel Modal ─────────────────────────────────────────────────────────
+  const CancelModal = cancelModal && (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div style={{ background:CARD,borderRadius:16,padding:32,width:440,maxWidth:"90vw",boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}>
+        <h3 style={{ margin:"0 0 8px",fontSize:18,fontWeight:700,color:TEXT }}>Cancelar cita</h3>
+        <p style={{ margin:"0 0 16px",fontSize:14,color:MUTED }}>Escribe el motivo de la cancelación. El cliente recibirá una notificación por WhatsApp.</p>
+        <textarea
+          value={cancelModal.reason}
+          onChange={e=>setCancelModal(m=>({...m,reason:e.target.value}))}
+          placeholder="Ej: No hay disponibilidad en la fecha solicitada..."
+          rows={4}
+          style={{ width:"100%",boxSizing:"border-box",background:BG,border:`1.5px solid ${BORDER}`,borderRadius:10,padding:"10px 12px",fontSize:14,color:TEXT,outline:"none",resize:"vertical",fontFamily:"inherit" }}
+          onFocus={e=>e.target.style.borderColor="#93C5FD"} onBlur={e=>e.target.style.borderColor=BORDER}
+        />
+        <div style={{ display:"flex",gap:12,marginTop:20,justifyContent:"flex-end" }}>
+          <button onClick={()=>setCancelModal(null)} style={{ padding:"9px 20px",borderRadius:10,border:`1.5px solid ${BORDER}`,background:BG,color:MUTED,fontWeight:600,cursor:"pointer",fontSize:14 }}>Cancelar</button>
+          <button onClick={confirmCancel} style={{ padding:"9px 20px",borderRadius:10,border:"none",background:"#DC2626",color:"#fff",fontWeight:700,cursor:"pointer",fontSize:14 }}>Enviar cancelación</button>
+        </div>
+      </div>
+    </div>
+  );
+
+
   return (
     <div style={{ minHeight:"100vh",background:BG,color:TEXT,fontFamily:"system-ui,-apple-system,sans-serif" }}>
+      {CancelModal}
       {/* Header */}
       <div style={{ padding:"32px 32px 0" }}>
         <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:16 }}>
@@ -394,7 +437,7 @@ export default function CitasPage() {
                           </td>
                         ))}
                         <td style={TD}>
-                          <select value={appt.status} onChange={e=>updateStatus(appt.id,e.target.value)} style={{ padding:"4px 8px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",border:`1.5px solid ${sc.border}`,background:sc.bg,color:sc.color,outline:"none" }}>
+                          <select value={appt.status} onChange={e=>updateStatus(appt.id,e.target.value)} disabled={notifying===appt.id} style={{ padding:"4px 8px",borderRadius:20,opacity:notifying===appt.id?0.6:1,fontSize:12,fontWeight:700,cursor:"pointer",border:`1.5px solid ${sc.border}`,background:sc.bg,color:sc.color,outline:"none" }}>
                             <option value="pendiente">Pendiente</option>
                             <option value="confirmada">Confirmada</option>
                             <option value="cancelada">Cancelada</option>

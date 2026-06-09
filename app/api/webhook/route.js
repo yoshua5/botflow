@@ -386,27 +386,29 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     { field_key: "motivo",         question: "¿Cuál es el motivo de la cita?",        required: false, field_order: 4 },
   ];
 
-  // Get current conversation state — prioritize rows where appointment_state IS NOT NULL
-  // (multiple rows exist per phone due to bot_id variations; newest row may have null state)
+  // Get current conversation state — filter by bot_id+phone to always hit the same row
+  // Also prioritize rows where appointment_state IS NOT NULL
   let convRow = null;
   {
-    const { data: activeRow } = await db
-      .from("conversations")
-      .select("appointment_state")
-      .eq("user_id", userId)
-      .eq("from_phone", from)
-      .not("appointment_state", "is", null)
-      .limit(1)
-      .maybeSingle();
+    let q = db.from("conversations").select("appointment_state")
+      .eq("user_id", userId).eq("from_phone", from);
+    if (botId) q = q.eq("bot_id", botId);
+    q = q.not("appointment_state", "is", null).limit(1);
+    const { data: activeRow, error: readErr } = await q.maybeSingle();
+    if (readErr) console.error("❌ appt state read error:", JSON.stringify(readErr));
     convRow = activeRow || null;
+    console.log(`📋 appt state read [${from}] botId=${botId} found=${!!convRow} idx=${convRow?.appointment_state?.currentIdx ?? "none"} dataKeys=${JSON.stringify(Object.keys(convRow?.appointment_state?.data || {}))}`);
   }
 
   const state = convRow?.appointment_state;
 
   // ── If user re-triggers intent while mid-flow, restart fresh ────────
   if (state?.collecting && APPT_INTENT.test(text)) {
-    await db.from("conversations").update({ appointment_state: null })
-      .eq("user_id", userId).eq("from_phone", from);
+    {
+      let uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
+      if (botId) uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
+      await uq;
+    }
     // Fall through to intent detection below (state is now cleared in DB)
   }
   // ── Mid-collection: we already started asking questions ──────────────
@@ -414,8 +416,11 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     const { fields, currentIdx, data, availCfg } = state;
     const field = fields[currentIdx];
     if (!field) {
-      await db.from("conversations").update({ appointment_state: null })
-        .eq("user_id", userId).eq("from_phone", from);
+      {
+        let uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
+        if (botId) uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
+        await uq;
+      }
       return false;
     }
 
@@ -426,9 +431,13 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
 
     if (nextIdx < fields.length) {
       const nextField = fields[nextIdx];
-      await db.from("conversations")
-        .update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg }, updated_at: new Date().toISOString() })
-        .eq("user_id", userId).eq("from_phone", from);
+      console.log(`💾 saving state [${from}] idx=${nextIdx} data=${JSON.stringify(newData)}`);
+      {
+        let uq = db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("from_phone", from);
+        if (botId) uq = db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
+        const { error: updErr } = await uq;
+        if (updErr) console.error("❌ appt state update error:", JSON.stringify(updErr));
+      }
       await sendWhatsAppText(from, buildFieldQuestion(nextField, availCfg), config);
     } else {
       // All fields collected — save appointment
@@ -445,8 +454,11 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
       } else {
         console.log("✅ appointment saved for userId:", userId, "phone:", from);
       }
-      await db.from("conversations").update({ appointment_state: null })
-        .eq("user_id", userId).eq("from_phone", from);
+      {
+        let uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
+        if (botId) uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
+        await uq;
+      }
 
       // Build confirmation message with availability info if set
       let confirmMsg = "¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nTe confirmaremos pronto. ¡Gracias! 😊";
@@ -487,9 +499,11 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     const { data: existingConv } = await db.from("conversations")
       .select("id").eq("user_id", userId).eq("from_phone", from).limit(1).maybeSingle();
     if (existingConv) {
-      await db.from("conversations")
-        .update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg }, updated_at: new Date().toISOString() })
-        .eq("user_id", userId).eq("from_phone", from);
+      {
+        let uq = db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("from_phone", from);
+        if (botId) uq = db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
+        await uq;
+      }
     } else {
       await db.from("conversations").insert({
         user_id: userId, bot_id: botId, from_phone: from,

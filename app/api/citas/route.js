@@ -28,25 +28,6 @@ export async function GET() {
   }
 }
 
-export async function PATCH(request) {
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const { id, status } = await request.json();
-    if (!id || !["pendiente","confirmada","cancelada"].includes(status))
-      return NextResponse.json({ error: "Invalid" }, { status: 400 });
-
-    const { error } = await db().from("appointments").update({ status }).eq("id", id).eq("user_id", userId);
-    if (error) throw error;
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("PATCH /api/citas:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
-
 export async function DELETE(request) {
   try {
     const session = await getServerSession(authOptions);
