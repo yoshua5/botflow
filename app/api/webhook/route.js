@@ -398,8 +398,14 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
 
   const state = convRow?.appointment_state;
 
+  // ── If user re-triggers intent while mid-flow, restart fresh ────────
+  if (state?.collecting && APPT_INTENT.test(text)) {
+    await db.from("conversations").update({ appointment_state: null })
+      .eq("user_id", userId).eq("from_phone", from);
+    // Fall through to intent detection below (state is now cleared in DB)
+  }
   // ── Mid-collection: we already started asking questions ──────────────
-  if (state?.collecting) {
+  else if (state?.collecting) {
     const { fields, currentIdx, data, availCfg } = state;
     const field = fields[currentIdx];
     if (!field) {
