@@ -558,6 +558,8 @@ async function callClaude(userMessage, config, knowledge = "", kbImages = [], hi
   }
   systemPrompt += `\nIMPORTANTE: ${isFirstMessage ? "Esta es la primera vez que hablas con este usuario, preséntate con tu nombre correcto." : "Ya conoces a este usuario, NO te vuelvas a presentar. Continúa la conversación de forma natural."}`;
 
+  systemPrompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nREGLA CRÍTICA — MEMORIA DE CONVERSACIÓN\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nMantén memoria de TODA la conversación. NUNCA repitas una pregunta que el cliente ya respondió.\n- Si el cliente ya dio el diseño, no vuelvas a pedirlo.\n- Si el cliente ya dio medidas, no vuelvas a pedirlas.\n- Si el cliente ya dio fecha de entrega, no vuelvas a preguntarla.\n- Si el cliente dijo "la profundidad que recomienden", acepta eso como respuesta válida.\n- Si el cliente ya dio su nombre, no lo pidas de nuevo.\nUna vez que tengas tipo de producto, diseño/concepto, medidas, acabado/color y tiempo de entrega, procede a cotizar o pregunta ÚNICAMENTE el dato indispensable faltante.\nHabla como un asesor humano experto. NO hagas listas largas cuando una o dos preguntas son suficientes.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
   systemPrompt += `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

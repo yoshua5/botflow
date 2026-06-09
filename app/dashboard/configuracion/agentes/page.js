@@ -64,7 +64,7 @@ export default function AgentesPage() {
     enabled: true, responseDelay: "0", language: "es", accent: "mx", tone: "amigable",
     greeting: BOT_GREET_DEFAULT, farewell: BOT_BYE_DEFAULT,
     formality: "medio", useEmojis: true, shortAnswers: false,
-    workingHours: "Lunes a Viernes 9:00–18:00", transferToHuman: false,
+    workingHours: "Lunes a Viernes 9:00–18:00", transferToHuman: false, extraInstructions: "",
   });
   const [saving, setSaving] = useState(false), [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -88,6 +88,7 @@ export default function AgentesPage() {
         shortAnswers: d.shortAnswers || false,
         workingHours: d.hours || "Lunes a Viernes 9:00–18:00",
         transferToHuman: d.transferToHuman || false,
+        extraInstructions: d.extraInstructions || "",
       }));
       setLoading(false);
     });
@@ -116,7 +117,7 @@ export default function AgentesPage() {
         language: cfg.language, accent: cfg.accent, tone: cfg.tone,
         greeting: cfg.greeting, farewell: cfg.farewell, formality: cfg.formality,
         useEmojis: cfg.useEmojis, shortAnswers: cfg.shortAnswers,
-        hours: cfg.workingHours, transferToHuman: cfg.transferToHuman,
+        hours: cfg.workingHours, transferToHuman: cfg.transferToHuman, extraInstructions: cfg.extraInstructions,
       }),
     });
     setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),3000);
@@ -216,6 +217,19 @@ export default function AgentesPage() {
             <div style={{borderTop:`1px solid ${BD}`,paddingTop:16}}>
               <Toggle on={cfg.useEmojis} onChange={set("useEmojis")} label="Usar emojis en respuestas" hint="Hace las conversaciones más amigables y expresivas." />
               <Toggle on={cfg.transferToHuman} onChange={set("transferToHuman")} label="Transferir a humano cuando sea necesario" hint="El bot avisará al equipo cuando no pueda resolver la consulta." />
+            </div>
+            <div style={{borderTop:`1px solid ${BD}`,paddingTop:16,marginTop:4}}>
+              <label style={{display:"block",fontSize:13,fontWeight:600,color:TX,marginBottom:6}}>Instrucciones adicionales</label>
+              <textarea
+                value={cfg.extraInstructions}
+                onChange={e=>set("extraInstructions")(e.target.value)}
+                placeholder={"Ej: Nunca repitas preguntas ya respondidas. Una vez que tengas diseño, medidas y color, procede a cotizar directamente sin pedir más datos..."}
+                rows={5}
+                style={{width:"100%",padding:"10px 14px",border:`1.5px solid ${BD}`,borderRadius:10,fontSize:13,color:TX,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",lineHeight:1.5}}
+                onFocus={e=>e.target.style.borderColor="#93C5FD"}
+                onBlur={e=>e.target.style.borderColor=BD}
+              />
+              <p style={{margin:"5px 0 0",fontSize:12,color:MT}}>Reglas de negocio o comportamientos específicos que se añaden al prompt del agente.</p>
             </div>
           </Card>
         </div>
