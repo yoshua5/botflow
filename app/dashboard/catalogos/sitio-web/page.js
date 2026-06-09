@@ -1,15 +1,18 @@
 "use client";
 import { useState } from "react";
 
-const BG    = "#0D0D0D";
-const CARD  = "#111111";
-const BORDER= "#222222";
-const MUTED = "#555555";
+const BG     = "#F8FAFF";
+const CARD   = "#FFFFFF";
+const BORDER = "#E2E8F0";
+const MUTED  = "#64748B";
+const TEXT   = "#0F172A";
+const BLUE   = "#2563EB";
+const BLUE_L = "#EFF6FF";
 
 export default function SitioWebPage() {
   const [url, setUrl]           = useState("");
   const [loading, setLoading]   = useState(false);
-  const [items, setItems]       = useState(null); // null = not scraped yet
+  const [items, setItems]       = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
@@ -26,37 +29,16 @@ export default function SitioWebPage() {
       });
       const d = await r.json();
       if (!r.ok) { setError(d.error || "No se pudo extraer el sitio"); setLoading(false); return; }
-
-      // Build items from scraped data
       const result = [];
-      // Text content as a doc item
       if (d.businessName || d.description || d.products?.length) {
-        result.push({
-          id: "text-" + Date.now(),
-          type: "Sitio Web",
-          name: d.businessName || new URL(url.trim()).hostname,
-          content: JSON.stringify(d, null, 2),
-          preview: null,
-          isText: true,
-          description: d.description || "",
-        });
+        result.push({ id: "text-" + Date.now(), type: "Sitio Web", name: d.businessName || new URL(url.trim()).hostname, content: JSON.stringify(d, null, 2), preview: null, isText: true, description: d.description || "" });
       }
-      // Images
       (d.images || []).forEach((img, i) => {
-        result.push({
-          id: "img-" + i,
-          type: "image",
-          name: img.name || img.alt || `imagen-${i + 1}`,
-          src: img.src || img.url,
-          description: img.description || img.alt || "",
-          isText: false,
-        });
+        result.push({ id: "img-" + i, type: "image", name: img.name || img.alt || `imagen-${i + 1}`, src: img.src || img.url, description: img.description || img.alt || "", isText: false });
       });
       setItems(result);
       setSelected(new Set(result.map(r => r.id)));
-    } catch (e) {
-      setError("Error de red: " + e.message);
-    }
+    } catch (e) { setError("Error de red: " + e.message); }
     setLoading(false);
   }
 
@@ -74,7 +56,6 @@ export default function SitioWebPage() {
     for (const item of toSave) {
       try {
         if (item.isText) {
-          // Upload as a text blob
           const blob = new Blob([item.content], { type: "text/plain" });
           const fd = new FormData();
           fd.append("file", blob, item.name + ".txt");
@@ -83,7 +64,6 @@ export default function SitioWebPage() {
           const r = await fetch("/api/knowledge", { method: "POST", body: fd });
           r.ok ? ok++ : fail++;
         } else if (item.src) {
-          // Fetch image and upload
           const imgRes = await fetch(`/api/scrape-image?url=${encodeURIComponent(item.src)}`).catch(() => null);
           if (imgRes?.ok) {
             const blob = await imgRes.blob();
@@ -94,7 +74,6 @@ export default function SitioWebPage() {
             const r = await fetch("/api/knowledge", { method: "POST", body: fd });
             r.ok ? ok++ : fail++;
           } else {
-            // Fallback: save as reference text
             const blob = new Blob([`Imagen: ${item.name}\nURL: ${item.src}\nDescripción: ${item.description}`], { type: "text/plain" });
             const fd = new FormData();
             fd.append("file", blob, item.name + ".txt");
@@ -111,62 +90,59 @@ export default function SitioWebPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: "#fff", fontFamily: "system-ui, sans-serif" }}>
-      {/* Header */}
-      <div style={{ padding: "28px 32px 0" }}>
-        <a href="/dashboard/catalogos" style={{ color: MUTED, textDecoration: "none", fontSize: 13 }}>← Catálogo</a>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: "8px 0 0" }}>Extraer desde Sitio Web</h1>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: MUTED }}>Pega la URL de tu negocio y extraemos automáticamente el contenido</p>
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      <div style={{ padding: "32px 32px 0" }}>
+        <a href="/dashboard/catalogos" style={{ color: MUTED, textDecoration: "none", fontSize: 13, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 8 }}>← Catálogo</a>
+        <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Extraer desde Sitio Web</h1>
+        <p style={{ margin: "4px 0 0", fontSize: 14, color: MUTED }}>Pega la URL de tu negocio y extraemos automáticamente el contenido</p>
       </div>
 
       <div style={{ padding: "24px 32px 40px" }}>
         {/* URL input */}
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: "#ccc", display: "block", marginBottom: 10 }}>URL del sitio web</label>
+        <div style={{ background: CARD, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: 24, marginBottom: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <label style={{ fontSize: 13, fontWeight: 700, color: TEXT, display: "block", marginBottom: 10 }}>URL del sitio web</label>
           <div style={{ display: "flex", gap: 10 }}>
             <input
               value={url} onChange={e => setUrl(e.target.value)}
               onKeyDown={e => e.key === "Enter" && scrape()}
               placeholder="https://tuempresa.com"
-              style={{ flex: 1, background: "#1A1A1A", border: `1px solid ${BORDER}`, color: "#fff", borderRadius: 10, padding: "10px 14px", fontSize: 14, outline: "none" }}
+              style={{ flex: 1, background: BG, border: `1.5px solid ${BORDER}`, color: TEXT, borderRadius: 10, padding: "10px 14px", fontSize: 14, outline: "none", fontFamily: "inherit" }}
+              onFocus={e => e.target.style.borderColor = "#93C5FD"}
+              onBlur={e => e.target.style.borderColor = BORDER}
             />
             <button onClick={scrape} disabled={loading || !url.trim()} style={{
-              background: "#2563EB", color: "#fff", border: "none", borderRadius: 10,
+              background: BLUE, color: "#fff", border: "none", borderRadius: 10,
               padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer",
-              opacity: loading || !url.trim() ? 0.6 : 1,
+              opacity: loading || !url.trim() ? 0.6 : 1, boxShadow: "0 2px 8px rgba(37,99,235,0.2)",
             }}>
               {loading ? "⏳ Extrayendo..." : "🔍 Extraer"}
             </button>
           </div>
-          {error && <div style={{ marginTop: 10, fontSize: 13, color: "#EF4444" }}>❌ {error}</div>}
-          <div style={{ marginTop: 10, fontSize: 12, color: MUTED }}>
-            Extrae: nombre del negocio, descripción, productos, servicios e imágenes
-          </div>
+          {error && <div style={{ marginTop: 10, fontSize: 13, color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 12px" }}>❌ {error}</div>}
+          <div style={{ marginTop: 10, fontSize: 12, color: MUTED }}>Extrae: nombre del negocio, descripción, productos, servicios e imágenes</div>
         </div>
 
-        {/* Loading skeleton */}
         {loading && (
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 40, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Analizando sitio web...</div>
+          <div style={{ background: CARD, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: 48, textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🔍</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: TEXT }}>Analizando sitio web...</div>
             <div style={{ fontSize: 13, color: MUTED }}>Esto puede tomar unos segundos</div>
           </div>
         )}
 
-        {/* Results */}
         {items !== null && !loading && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>
                 {items.length} elementos encontrados
-                {selected.size > 0 && <span style={{ color: "#60A5FA", marginLeft: 8, fontSize: 13 }}>· {selected.size} seleccionados</span>}
+                {selected.size > 0 && <span style={{ color: BLUE, marginLeft: 8, fontSize: 13 }}>· {selected.size} seleccionados</span>}
               </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setSelected(new Set(items.map(i => i.id)))} style={{ background: CARD, border: `1px solid ${BORDER}`, color: "#ccc", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>Seleccionar todo</button>
-                <button onClick={() => setSelected(new Set())} style={{ background: CARD, border: `1px solid ${BORDER}`, color: "#ccc", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>Deseleccionar</button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setSelected(new Set(items.map(i => i.id)))} style={{ background: CARD, border: `1.5px solid ${BORDER}`, color: MUTED, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>Seleccionar todo</button>
+                <button onClick={() => setSelected(new Set())} style={{ background: CARD, border: `1.5px solid ${BORDER}`, color: MUTED, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>Deseleccionar</button>
                 {!saved && (
                   <button onClick={saveSelected} disabled={saving || !selected.size} style={{
-                    background: "#2563EB", color: "#fff", border: "none", borderRadius: 8,
+                    background: BLUE, color: "#fff", border: "none", borderRadius: 8,
                     padding: "6px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer",
                     opacity: saving || !selected.size ? 0.6 : 1,
                   }}>
@@ -174,7 +150,7 @@ export default function SitioWebPage() {
                   </button>
                 )}
                 {saved && (
-                  <a href="/dashboard/catalogos" style={{ background: "#166534", color: "#4ADE80", borderRadius: 8, padding: "6px 18px", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
+                  <a href="/dashboard/catalogos" style={{ background: "#F0FDF4", border: "1.5px solid #BBF7D0", color: "#16A34A", borderRadius: 8, padding: "6px 18px", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
                     ✅ Ver catálogo →
                   </a>
                 )}
@@ -184,25 +160,25 @@ export default function SitioWebPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
               {items.map(item => (
                 <div key={item.id} onClick={() => toggleSelect(item.id)} style={{
-                  background: CARD, border: `2px solid ${selected.has(item.id) ? "#2563EB" : BORDER}`,
-                  borderRadius: 12, overflow: "hidden", cursor: "pointer", transition: "border-color 0.15s",
-                  opacity: item.savedOk ? 0.5 : 1,
+                  background: CARD, border: `2px solid ${selected.has(item.id) ? BLUE : BORDER}`,
+                  borderRadius: 12, overflow: "hidden", cursor: "pointer", transition: "all 0.15s",
+                  opacity: item.savedOk ? 0.5 : 1, boxShadow: selected.has(item.id) ? "0 0 0 3px #BFDBFE" : "0 1px 3px rgba(0,0,0,0.06)",
                 }}>
-                  <div style={{ height: 120, background: "#181818", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                  <div style={{ height: 120, background: BLUE_L, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                     {item.src ? (
                       <img src={item.src} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { e.target.style.display = "none"; }} />
                     ) : (
                       <span style={{ fontSize: 40 }}>{item.type === "Sitio Web" ? "🌐" : "📄"}</span>
                     )}
-                    <div style={{ position: "absolute", top: 8, right: 8, width: 20, height: 20, borderRadius: "50%", border: `2px solid ${selected.has(item.id) ? "#2563EB" : "#555"}`, background: selected.has(item.id) ? "#2563EB" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff" }}>
+                    <div style={{ position: "absolute", top: 8, right: 8, width: 22, height: 22, borderRadius: "50%", border: `2px solid ${selected.has(item.id) ? BLUE : BORDER}`, background: selected.has(item.id) ? BLUE : CARD, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
                       {selected.has(item.id) ? "✓" : ""}
                     </div>
-                    {item.savedOk && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>✅</div>}
+                    {item.savedOk && <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>✅</div>}
                   </div>
                   <div style={{ padding: "10px 12px" }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
                     {item.description && <div style={{ fontSize: 11, color: MUTED, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.description}</div>}
-                    <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>{item.type === "Sitio Web" ? "Contenido web" : item.src ? "Imagen" : "Documento"}</div>
+                    <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 4 }}>{item.type === "Sitio Web" ? "Contenido web" : item.src ? "Imagen" : "Documento"}</div>
                   </div>
                 </div>
               ))}
@@ -210,13 +186,12 @@ export default function SitioWebPage() {
           </div>
         )}
 
-        {/* Empty state */}
         {items !== null && !loading && items.length === 0 && (
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 40, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>😕</div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>No se encontró contenido</div>
+          <div style={{ background: CARD, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: 48, textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>😕</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: TEXT }}>No se encontró contenido</div>
             <div style={{ fontSize: 13, color: MUTED }}>Verifica que la URL sea pública y accesible, o sube el contenido manualmente.</div>
-            <a href="/dashboard/catalogos/contenido" style={{ display: "inline-block", marginTop: 16, background: "#2563EB", color: "#fff", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>📸 Subir manualmente</a>
+            <a href="/dashboard/catalogos/contenido" style={{ display: "inline-block", marginTop: 20, background: BLUE, color: "#fff", borderRadius: 10, padding: "10px 22px", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>📸 Subir manualmente</a>
           </div>
         )}
       </div>
