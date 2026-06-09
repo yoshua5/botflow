@@ -321,7 +321,7 @@ function getAvailableDates(availCfg, numDays = 14) {
   return dates;
 }
 
-function getAvailableSlots(availCfg) {
+function getApptTimeSlots(availCfg) {
   const start = availCfg?.start_time || "09:00";
   const end   = availCfg?.end_time   || "18:00";
   const mins  = availCfg?.slot_minutes || 60;
@@ -350,7 +350,7 @@ function buildFieldQuestion(field, availCfg) {
     return `${field.question}\n\n📅 *Fechas disponibles:*\n${list}\n\nResponde con el número o escribe la fecha.`;
   }
   if (isTimeField(key)) {
-    const slots = getAvailableSlots(availCfg);
+    const slots = getApptTimeSlots(availCfg);
     if (slots.length === 0) return field.question;
     const list = slots.map((s,i) => `  ${i+1}. ${s}`).join("\n");
     return `${field.question}\n\n🕐 *Horarios disponibles:*\n${list}\n\nResponde con el número o escribe la hora.`;
@@ -367,7 +367,7 @@ function resolveAnswer(text, field, availCfg) {
       if (dates[num-1]) return dates[num-1].label;
     }
     if (isTimeField(key)) {
-      const slots = getAvailableSlots(availCfg);
+      const slots = getApptTimeSlots(availCfg);
       if (slots[num-1]) return slots[num-1];
     }
   }
