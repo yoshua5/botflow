@@ -421,14 +421,19 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
       await sendWhatsAppText(from, buildFieldQuestion(nextField, availCfg), config);
     } else {
       // All fields collected — save appointment
-      await db.from("appointments").insert({
+      const { error: apptInsertError } = await db.from("appointments").insert({
         user_id:      userId,
-        bot_id:       botId,
+        bot_id:       botId || null,
         from_phone:   from,
         contact_name: contactName,
         data:         newData,
         status:       "pendiente",
       });
+      if (apptInsertError) {
+        console.error("❌ appointments insert failed:", JSON.stringify(apptInsertError));
+      } else {
+        console.log("✅ appointment saved for userId:", userId, "phone:", from);
+      }
       await db.from("conversations").update({ appointment_state: null })
         .eq("user_id", userId).eq("from_phone", from);
 
