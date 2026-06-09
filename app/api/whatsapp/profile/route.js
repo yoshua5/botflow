@@ -21,8 +21,8 @@ export async function POST(req) {
 
   const imageBuffer = Buffer.from(imageBase64, "base64");
 
-  // Step 1: Create resumable upload session
-  const sessionUrl = `https://graph.facebook.com/v19.0/${phoneNumberId}/uploads?file_length=${imageBuffer.length}&file_type=${encodeURIComponent(mimeType)}&file_name=profile.jpg`;
+  // Step 1: Create upload session using /app/uploads (correct node for WA profile pictures)
+  const sessionUrl = `https://graph.facebook.com/v19.0/app/uploads?file_length=${imageBuffer.length}&file_type=${encodeURIComponent(mimeType)}&file_name=profile.jpg`;
   const sessionRes = await fetch(sessionUrl,
     { method: "POST", headers: { Authorization: `Bearer ${token}` } }
   );
@@ -33,7 +33,7 @@ export async function POST(req) {
     return Response.json({ error: `[session ${errCode}] ${errMsg}` }, { status: 400 });
   }
 
-  // Step 2: Upload file bytes
+  // Step 2: Upload file bytes to the session
   const uploadRes = await fetch(
     `https://rupload.facebook.com/whatsapp-business-media/${sessionData.id}`,
     {
@@ -48,7 +48,7 @@ export async function POST(req) {
     return Response.json({ error: `[upload] ${errMsg}` }, { status: 400 });
   }
 
-  // Step 3: Set profile picture
+  // Step 3: Set profile picture with the upload handle
   const profileRes = await fetch(
     `https://graph.facebook.com/v19.0/${phoneNumberId}/whatsapp_business_profile`,
     {
