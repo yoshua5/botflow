@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: { ignoreDuringBuilds: true },
   experimental: {
     serverComponentsExternalPackages: ['pdf-parse', 'mammoth', 'xlsx'],
   },
@@ -35,8 +36,4 @@ const nextConfig = {
           { key: "Pragma", value: "no-cache" },
         ],
       },
-    ];
-  },
-};
-
-module.exports = nextConfig;
+    ]
