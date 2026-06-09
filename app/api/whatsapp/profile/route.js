@@ -2,27 +2,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getConfig } from "@/lib/storage";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
-  const cfg = await getConfig(session.user.id);
-  const phoneNumberId = cfg.phoneNumberId;
-  const token = cfg.accessToken;
-
-  if (!phoneNumberId || !token) {
-    return Response.json({ error: "WhatsApp no configurado" }, { status: 400 });
-  }
-
-  const res = await fetch(
-    `https://graph.facebook.com/v19.0/${phoneNumberId}/whatsapp_business_profile?fields=about,description,profile_picture_url,vertical`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  const data = await res.json();
-  if (!res.ok) return Response.json({ error: data.error?.message || "Meta error" }, { status: 400 });
-  return Response.json(data);
-}
-
 export async function POST(req) {
   const session = await getServerSession(authOptions);
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,15 +11,14 @@ export async function POST(req) {
   const token = cfg.accessToken;
 
   if (!phoneNumberId || !token) {
-    return Response.json({ error: "WhatsApp no configurado. Configura tu conexión primero." }, { status: 400 });
+    return Response.json({ error: "WhatsApp no configurado." }, { status: 400 });
   }
 
-  const { imageBase64, mimeType } = await req.json();
-  if (!imageBase64 || !mimeType) {
-    return Response.json({ error: "Imagen requerida" }, { status: 400 });
-  }
+  let body;
+  try { body = await req.json(); } catch { return Response.json({ error: "Body invalido" }, { status: 400 }); }
+  const { imageBase64, mimeType } = body;
+  if (!imageBase64 || !mimeType) return Response.json({ error: "Imagen requerida" }, { status: 400 });
 
-  // Convert base64 to buffer and upload to Meta
   const imageBuffer = Buffer.from(imageBase64, "base64");
   const formData = new FormData();
   const blob = new Blob([imageBuffer], { type: mimeType });
@@ -53,11 +31,8 @@ export async function POST(req) {
     { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData }
   );
   const uploadData = await uploadRes.json();
-  if (!uploadRes.ok) {
-    return Response.json({ error: uploadData.error?.message || "Error al subir imagen" }, { status: 400 });
-  }
+  if (!uploadRes.ok) return Response.json({ error: uploadData.error?.message || "Error al subir imagen" }, { status: 400 });
 
-  // Set profile picture using the media handle
   const profileRes = await fetch(
     `https://graph.facebook.com/v19.0/${phoneNumberId}/whatsapp_business_profile`,
     {
@@ -67,9 +42,7 @@ export async function POST(req) {
     }
   );
   const profileData = await profileRes.json();
-  if (!profileRes.ok) {
-    return Response.json({ error: profileData.error?.message || "Error al actualizar perfil" }, { status: 400 });
-  }
+  if (!profileRes.ok) return Response.json({ error: profileData.error?.message || "Error al actualizar perfil" }, { status: 400 });
 
   return Response.json({ success: true });
 }

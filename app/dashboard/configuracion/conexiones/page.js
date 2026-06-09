@@ -26,6 +26,7 @@ function StepWizard({ onDone, onCancel }) {
   const [step, setStep] = useState(1);
   const [fields, setFields] = useState({ phoneId: "", token: "", verifyToken: "" });
   const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
 
   const steps = [
     { n: 1, title: "Configura tu App de Meta" },
@@ -34,10 +35,10 @@ function StepWizard({ onDone, onCancel }) {
   ];
 
   async function connect() {
-    if (!fields.phoneId || !fields.token) { alert("Completa todos los campos"); return; }
-    setSaving(true);
+    if (!fields.phoneId || !fields.token) { setErr("Completa todos los campos"); return; }
+    setSaving(true); setErr("");
     const r = await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phoneNumberId: fields.phoneId, accessToken: fields.token, verifyToken: fields.verifyToken || "botflow_verify" }) });
-    if (r.ok) { onDone(); } else { alert("Error al guardar. Verifica tus credenciales."); setSaving(false); }
+    if (r.ok) { onDone(); } else { setErr("Error al guardar. Verifica tus credenciales."); setSaving(false); }
   }
 
   return (
@@ -53,6 +54,8 @@ function StepWizard({ onDone, onCancel }) {
           </div>
         ))}
       </div>
+
+      {err && <div style={{ background: RDL, border: `1px solid #FECACA`, borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: RD }}>{err}</div>}
 
       {step === 1 && (
         <div>
@@ -91,7 +94,7 @@ function StepWizard({ onDone, onCancel }) {
           ))}
           <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
             <button onClick={() => setStep(1)} style={{ padding: "10px 20px", background: "none", border: `1.5px solid ${BD}`, borderRadius: 10, fontSize: 14, color: MT, cursor: "pointer" }}>← Atrás</button>
-            <button onClick={() => { if (!fields.phoneId || !fields.token) { alert("Phone ID y Token son requeridos"); return; } setStep(3); }} style={{ padding: "10px 24px", background: BL, color: WH, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Siguiente →</button>
+            <button onClick={() => { if (!fields.phoneId || !fields.token) { setErr("Phone ID y Token son requeridos"); return; } setErr(""); setStep(3); }} style={{ padding: "10px 24px", background: BL, color: WH, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Siguiente →</button>
           </div>
         </div>
       )}
@@ -99,7 +102,7 @@ function StepWizard({ onDone, onCancel }) {
       {step === 3 && (
         <div>
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: TX }}>Paso 3: Confirmar conexión</h3>
-          <div style={{ background: "#F8FAFC", borderRadius: 12, padding: "16px 20px", marginBottom: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ background: SL, borderRadius: 12, padding: "16px 20px", marginBottom: 20, display: "flex", flexDirection: "column", gap: 8 }}>
             {[["Phone Number ID", fields.phoneId], ["Access Token", fields.token.substring(0, 12) + "•••••••"]].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                 <span style={{ color: MT }}>{k}</span>
@@ -124,23 +127,17 @@ function StepWizard({ onDone, onCancel }) {
 
 function WaProfileCard({ connected }) {
   const fileRef = useRef(null);
-  const [profile, setProfile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [imgData, setImgData] = useState(null);
-
-  useEffect(() => {
-    if (!connected) return;
-    fetch("/api/whatsapp/profile")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d && !d.error) setProfile(d); });
-  }, [connected]);
+  const [msg, setMsg] = useState(null); // { type: "ok"|"err", text }
 
   function onFile(e) {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) { alert("Solo imágenes (JPG, PNG)"); return; }
-    if (file.size > 5 * 1024 * 1024) { alert("Máximo 5 MB"); return; }
+    if (!file.type.startsWith("image/")) { setMsg({ type: "err", text: "Solo imágenes (JPG, PNG)" }); return; }
+    if (file.size > 5 * 1024 * 1024) { setMsg({ type: "err", text: "Máximo 5 MB" }); return; }
+    setMsg(null);
     const reader = new FileReader();
     reader.onload = ev => {
       const result = ev.target.result;
@@ -153,42 +150,47 @@ function WaProfileCard({ connected }) {
 
   async function savePhoto() {
     if (!imgData) return;
-    setUploading(true);
-    const r = await fetch("/api/whatsapp/profile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64: imgData.base64, mimeType: imgData.mimeType }),
-    });
-    const d = await r.json();
-    setUploading(false);
-    if (r.ok) {
-      alert("✅ Foto de perfil actualizada en WhatsApp");
-      setPreview(null);
-      setImgData(null);
-      // Reload profile
-      fetch("/api/whatsapp/profile").then(r2 => r2.ok ? r2.json() : null).then(d2 => { if (d2 && !d2.error) setProfile(d2); });
-    } else {
-      alert("❌ " + (d.error || "Error desconocido"));
+    setUploading(true); setMsg(null);
+    try {
+      const r = await fetch("/api/whatsapp/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: imgData.base64, mimeType: imgData.mimeType }),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        setMsg({ type: "ok", text: "Foto de perfil actualizada en WhatsApp ✅" });
+        setPreview(null); setImgData(null);
+      } else {
+        setMsg({ type: "err", text: d.error || "Error al actualizar foto" });
+      }
+    } catch (e) {
+      setMsg({ type: "err", text: "Error de conexión" });
     }
+    setUploading(false);
   }
 
   if (!connected) return null;
 
-  const currentPic = preview || profile?.profile_picture_url;
-
   return (
     <Card style={{ marginTop: 20 }}>
-      <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: TX }}>Perfil de WhatsApp</h2>
-      <p style={{ margin: "0 0 20px", fontSize: 13, color: MT }}>Cambia la foto de perfil que ven tus clientes en WhatsApp.</p>
+      <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: TX }}>Foto de perfil de WhatsApp</h2>
+      <p style={{ margin: "0 0 20px", fontSize: 13, color: MT }}>Cambia la imagen que ven tus clientes en WhatsApp.</p>
+
+      {msg && (
+        <div style={{ background: msg.type === "ok" ? GRL : RDL, border: `1px solid ${msg.type === "ok" ? GR : "#FECACA"}`, borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: msg.type === "ok" ? "#065F46" : RD }}>
+          {msg.text}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
-        {/* Avatar */}
         <div
           onClick={() => fileRef.current?.click()}
-          style={{ width: 96, height: 96, borderRadius: "50%", background: currentPic ? "transparent" : "#25D366", border: `3px dashed ${preview ? BL : BD}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, position: "relative", transition: "border-color 0.2s" }}
+          style={{ width: 96, height: 96, borderRadius: "50%", background: preview ? "transparent" : "#25D366", border: `3px dashed ${preview ? BL : BD}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, position: "relative" }}
           title="Haz clic para cambiar la foto"
         >
-          {currentPic
-            ? <img src={currentPic} alt="Perfil" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {preview
+            ? <img src={preview} alt="Perfil" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             : <span style={{ fontSize: 36 }}>💬</span>
           }
           <div style={{ position: "absolute", bottom: 0, right: 0, background: BL, borderRadius: "50%", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>✏️</div>
@@ -210,7 +212,7 @@ function WaProfileCard({ connected }) {
                 <button onClick={savePhoto} disabled={uploading} style={{ padding: "9px 20px", background: GR, color: WH, border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: uploading ? "wait" : "pointer", opacity: uploading ? 0.7 : 1 }}>
                   {uploading ? "⏳ Subiendo..." : "💾 Guardar foto"}
                 </button>
-                <button onClick={() => { setPreview(null); setImgData(null); }} style={{ padding: "9px 14px", background: RDL, color: RD, border: "none", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>
+                <button onClick={() => { setPreview(null); setImgData(null); setMsg(null); }} style={{ padding: "9px 14px", background: RDL, color: RD, border: "none", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>
                   ✕ Cancelar
                 </button>
               </>
@@ -234,7 +236,7 @@ export default function ConexionesPage() {
       const bots = d.bots || [];
       setBot(bots[0] || null);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   const waStatus = bot?.phoneNumberId ? "connected" : "disconnected";
