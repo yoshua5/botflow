@@ -302,7 +302,7 @@ const APPT_INTENT = /\b(cita|citas|agendar|agenda|reservar|reserva|turno|quiero 
 
 // ── Availability helpers ────────────────────────────────────────────────
 function getAvailableDates(availCfg, numDays = 14) {
-  const allowedDays = availCfg?.available_days || [1,2,3,4,5];
+  const allowedDays = (availCfg?.available_days || [1,2,3,4,5]).map(Number);
   const dates = [];
   const DAY_ES = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
   const MONTH_ES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
@@ -853,6 +853,4 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
       console.error("❌ Error sending image:", JSON.stringify(errData));
     }
   } catch (err) {
-    console.error("❌ sendWhatsAppImage error:", err.message);
-  }
-}
+    console.error("❌ sendWhatsAppImage error:", err.me
