@@ -318,4 +318,7 @@ export async function DELETE(request) {
     await setKBIndex(updated, userId);
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("
+    console.error("DELETE /api/knowledge error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
