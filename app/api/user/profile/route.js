@@ -1,10 +1,16 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
-import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 function db() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex");
+  return `${salt}:${hash}`;
 }
 
 export async function PATCH(req) {
@@ -18,7 +24,7 @@ export async function PATCH(req) {
   if (name) updates.name = name;
   if (password) {
     if (password.length < 6) return Response.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 });
-    updates.password = await bcrypt.hash(password, 10);
+    updates.password_hash = hashPassword(password);
   }
 
   if (Object.keys(updates).length === 0) return Response.json({ success: true });
