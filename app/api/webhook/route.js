@@ -303,12 +303,23 @@ const APPT_INTENT = /\b(cita|citas|agendar|agenda|reservar|reserva|turno|quiero 
 async function handleAppointmentFlow(text, from, userId, botId, contactName, config) {
   const db = supabase();
 
-  // Get current state from conversations table
+  // Default fields used when none are saved in DB yet
+  const DEFAULT_FIELDS = [
+    { field_key: "nombre",         question: "¿Cuál es tu nombre completo?",         required: true,  field_order: 0 },
+    { field_key: "telefono",       question: "¿Cuál es tu número de teléfono?",       required: true,  field_order: 1 },
+    { field_key: "fecha_deseada",  question: "¿Qué fecha te gustaría para la cita?",  required: true,  field_order: 2 },
+    { field_key: "hora_deseada",   question: "¿A qué hora te gustaría la cita?",      required: true,  field_order: 3 },
+    { field_key: "motivo",         question: "¿Cuál es el motivo de la cita?",        required: false, field_order: 4 },
+  ];
+
+  // Get current conversation state — use limit(1) to avoid maybeSingle error on duplicates
   const { data: convRow } = await db
     .from("conversations")
     .select("appointment_state")
     .eq("user_id", userId)
     .eq("from_phone", from)
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   const state = convRow?.appointment_state;
@@ -317,16 +328,21 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
   if (state?.collecting) {
     const { fields, currentIdx, data } = state;
     const field = fields[currentIdx];
+    if (!field) {
+      // Corrupted state — reset
+      await db.from("conversations").update({ appointment_state: null })
+        .eq("user_id", userId).eq("from_phone", from);
+      return false;
+    }
 
-    // Save the user's answer for the current field
     const newData = { ...data, [field.field_key]: text.trim() };
-
     const nextIdx = currentIdx + 1;
 
     if (nextIdx < fields.length) {
       // Ask next question
       const nextField = fields[nextIdx];
-      await db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData } })
+      await db.from("conversations")
+        .update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData } })
         .eq("user_id", userId).eq("from_phone", from);
       await sendWhatsAppText(from, nextField.question, config);
     } else {
@@ -339,30 +355,38 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
         data:         newData,
         status:       "pendiente",
       });
-      // Clear appointment state
       await db.from("conversations").update({ appointment_state: null })
         .eq("user_id", userId).eq("from_phone", from);
 
-      await sendWhatsAppText(from, "¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nTe confirmaremos pronto. ¡Gracias! 😊", config);
+      // Build confirmation message with availability info if set
+      let confirmMsg = "¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nTe confirmaremos pronto. ¡Gracias! 😊";
+      try {
+        const { data: availCfg } = await db.from("appointment_config").select("*").eq("user_id", userId).maybeSingle();
+        if (availCfg) {
+          const DAY_NAMES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+          const days = (availCfg.available_days || []).map(d => DAY_NAMES[d]).join(", ");
+          confirmMsg = `¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nNuestro horario de atención es ${days} de ${availCfg.start_time} a ${availCfg.end_time}.`;
+          if (availCfg.notes) confirmMsg += `\n${availCfg.notes}`;
+          confirmMsg += "\n\nTe confirmaremos pronto. ¡Gracias! 😊";
+        }
+      } catch (_) {}
+      await sendWhatsAppText(from, confirmMsg, config);
     }
-    return true; // handled — skip Claude
+    return true;
   }
 
-  // ── Intent detection: user wants to schedule ────────────────────────
+  // ── Intent detection ────────────────────────────────────────────────
   if (APPT_INTENT.test(text)) {
-    // Load fields config for this user
+    // Load fields from DB, fall back to defaults if none configured
     const { data: fieldsData } = await db
       .from("appointment_fields")
       .select("field_key, field_label, question, field_order, required")
       .eq("user_id", userId)
       .order("field_order", { ascending: true });
 
-    const fields = fieldsData && fieldsData.length > 0 ? fieldsData : null;
-    if (!fields || fields.length === 0) return false; // no fields configured — let Claude handle it
+    const fields = (fieldsData && fieldsData.length > 0) ? fieldsData : DEFAULT_FIELDS;
 
-    // Start collection
-    // Safe update — conversations unique constraint is (user_id, bot_id, from_phone)
-    // We update any row matching user+phone (bot_id may vary), or insert if none
+    // Set appointment state on existing conversation row (or insert new)
     const { data: existingConv } = await db.from("conversations")
       .select("id").eq("user_id", userId).eq("from_phone", from).limit(1).maybeSingle();
     if (existingConv) {
@@ -371,16 +395,16 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
         .eq("user_id", userId).eq("from_phone", from);
     } else {
       await db.from("conversations").insert({
-        user_id: userId, from_phone: from,
+        user_id: userId, bot_id: botId, from_phone: from,
         appointment_state: { collecting: true, fields, currentIdx: 0, data: {} },
       });
     }
 
-    await sendWhatsAppText(from, `¡Hola! Con gusto te ayudo a agendar tu cita 📋\n\n${fields[0].question}`, config);
-    return true; // handled
+    await sendWhatsAppText(from, `¡Con gusto te ayudo a agendar tu cita! 📋\n\n${fields[0].question}`, config);
+    return true;
   }
 
-  return false; // not an appointment message
+  return false;
 }
 
 async function callClaude(userMessage, config, knowledge = "", kbImages = [], history = [], availableSlots = null) {
