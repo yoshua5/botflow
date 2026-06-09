@@ -179,7 +179,7 @@ export async function POST(request) {
         { onConflict: "user_id,bot_id,from_phone" }
       );
     } catch (upsertErr) {
-      console.error("⚠️ Contact upsert error (continuing):", upsertErr.message);
+      console.error("\u26a0\ufe0f Contact upsert error (continuing):", upsertErr.message);
     }
     // ───────────────────────────────────────────────────────────────────
 
@@ -852,4 +852,27 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
     );
     const uploadData = await uploadRes.json();
 
-    i
+    if (!uploadRes.ok || !uploadData.id) {
+      console.error("❌ Media upload error:", JSON.stringify(uploadData));
+      return;
+    }
+
+    const sendRes = await fetch(`https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.accessToken}` },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to,
+        type: "image",
+        image: { id: uploadData.id, caption: imageName || "" },
+      }),
+    });
+    if (!sendRes.ok) {
+      const errData = await sendRes.json();
+      console.error("❌ Error sending image:", JSON.stringify(errData));
+    }
+  } catch (err) {
+    console.error("❌ sendWhatsAppImage error:", err.message);
+  }
+}
