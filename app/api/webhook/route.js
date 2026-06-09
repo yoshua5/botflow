@@ -853,4 +853,6 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
       console.error("❌ Error sending image:", JSON.stringify(errData));
     }
   } catch (err) {
-    console.error("❌ sendWhatsAppImage error:", err.me
+    console.error("❌ sendWhatsAppImage error:", err.message);
+  }
+}
