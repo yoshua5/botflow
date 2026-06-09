@@ -165,6 +165,24 @@ export async function POST(request) {
       text = message.text.body;
     }
 
+    // ── Upsert contact into conversations table ────────────────────────
+    try {
+      const db = supabase();
+      await db.from("conversations").upsert(
+        {
+          user_id:      userId,
+          bot_id:       activeBot?.id || null,
+          from_phone:   from,
+          contact_name: contactName || null,
+          updated_at:   new Date().toISOString(),
+        },
+        { onConflict: "user_id,from_phone" }
+      );
+    } catch (upsertErr) {
+      console.error("⚠️ Contact upsert error (continuing):", upsertErr.message);
+    }
+    // ───────────────────────────────────────────────────────────────────
+
     // ── Appointment flow ───────────────────────────────────────────────
     let _apptHandled = false;
     try {
@@ -834,27 +852,4 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
     );
     const uploadData = await uploadRes.json();
 
-    if (!uploadRes.ok || !uploadData.id) {
-      console.error("❌ Media upload error:", JSON.stringify(uploadData));
-      return;
-    }
-
-    const sendRes = await fetch(`https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.accessToken}` },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: to,
-        type: "image",
-        image: { id: uploadData.id, caption: imageName || "" },
-      }),
-    });
-    if (!sendRes.ok) {
-      const errData = await sendRes.json();
-      console.error("❌ Error sending image:", JSON.stringify(errData));
-    }
-  } catch (err) {
-    console.error("❌ sendWhatsAppImage error:", err.message);
-  }
-}
+    if (!upl
