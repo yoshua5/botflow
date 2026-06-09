@@ -273,14 +273,15 @@ export async function PATCH(request) {
       );
     }
 
-    const { id, description } = await request.json();
+    const { id, description, tags } = await request.json();
     if (!id) return NextResponse.json({ error: "No id" }, { status: 400 });
 
     const index = await getKBIndex(userId);
     const i = index.findIndex(f => f.id === id);
     if (i === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    index[i].description = description ?? "";
+    if (description !== undefined) index[i].description = description ?? "";
+    if (tags !== undefined) index[i].tags = Array.isArray(tags) ? tags : [];
     await setKBIndex(index, userId);
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -317,7 +318,4 @@ export async function DELETE(request) {
     await setKBIndex(updated, userId);
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("DELETE /api/knowledge error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
+    console.error("
