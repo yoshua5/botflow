@@ -19,7 +19,9 @@ async function sendWAText(to, body, phoneId, token) {
   if (!r.ok) {
     const e = await r.text();
     console.error("WA send error:", e);
+    return { ok: false, error: e };
   }
+  return { ok: true };
 }
 
 export async function PATCH(req, { params }) {
@@ -64,8 +66,8 @@ export async function PATCH(req, { params }) {
   if (updateErr) return Response.json({ error: updateErr.message }, { status: 500 });
 
   // Send WhatsApp notification
+  let notifResult = { sent: false, reason: "no_attempt" };
   try {
-    // Get bot credentials — try appt.bot_id first, fallback to any bot for this user
     let phoneId = null, accessToken = null;
 
     const botId = appt.bot_id;
@@ -73,7 +75,11 @@ export async function PATCH(req, { params }) {
       const { data: bot } = await supabase.from("bots").select("phone_number_id").eq("id", botId).single();
       const { data: sec } = await supabase.from("bot_secrets").select("access_token_enc").eq("bot_id", botId).single();
       phoneId = bot?.phone_number_id;
-      accessToken = sec?.access_token_enc ? decrypt(sec.access_token_enc) : null;
+      const decrypted = sec?.access_token_enc ? decrypt(sec.access_token_enc) : null;
+      accessToken = decrypted && decrypted.length > 30 ? decrypted : null;
+      if (decrypted && decrypted.length <= 30) {
+        console.warn(`[citas PATCH] bot ${botId}: decrypted token too short (${decrypted.length} chars) — likely invalid`);
+      }
     }
 
     // Fallback: first active bot for this user
@@ -81,14 +87,31 @@ export async function PATCH(req, { params }) {
       const { data: bots } = await supabase.from("bots").select("id, phone_number_id").eq("user_id", userId).limit(1);
       const firstBot = bots?.[0];
       if (firstBot) {
-        const { data: sec } = await supabase.from("bot_secrets").select("access_token_enc").eq("bot_id", firstBot.id).single();
-        phoneId = firstBot.phone_number_id;
-        accessToken = sec?.access_token_enc ? decrypt(sec.access_token_enc) : null;
+        phoneId = phoneId || firstBot.phone_number_id;
+        if (!accessToken) {
+          const { data: sec } = await supabase.from("bot_secrets").select("access_token_enc").eq("bot_id", firstBot.id).single();
+          const decrypted = sec?.access_token_enc ? decrypt(sec.access_token_enc) : null;
+          accessToken = decrypted && decrypted.length > 30 ? decrypted : null;
+          if (decrypted && decrypted.length <= 30) {
+            console.warn(`[citas PATCH] fallback bot ${firstBot.id}: decrypted token too short (${decrypted.length} chars)`);
+          }
+        }
       }
+    }
+
+    // Also try env var override
+    if (!accessToken && process.env.WA_ACCESS_TOKEN) {
+      accessToken = process.env.WA_ACCESS_TOKEN;
+      console.log("[citas PATCH] using WA_ACCESS_TOKEN env var");
+    }
+    if (!phoneId && process.env.WA_PHONE_NUMBER_ID) {
+      phoneId = process.env.WA_PHONE_NUMBER_ID;
     }
 
     const to = appt.from_phone;
     const nombre = appt.data?.nombre_completo || appt.data?.nombre || appt.contact_name || "Cliente";
+
+    console.log(`[citas PATCH] status=${status} phoneId=${phoneId} tokenLen=${accessToken?.length ?? 0} to=${to}`);
 
     if (phoneId && accessToken && to) {
       let msg = "";
@@ -104,14 +127,26 @@ export async function PATCH(req, { params }) {
       } else if (status === "pendiente") {
         msg = `⏳ *Cita en revisión*\n\nHola ${nombre}, tu cita está siendo revisada. Te notificaremos pronto.`;
       }
-      if (msg) await sendWAText(to, msg, phoneId, accessToken);
+      if (msg) {
+        const waResult = await sendWAText(to, msg, phoneId, accessToken);
+        notifResult = waResult.ok
+          ? { sent: true }
+          : { sent: false, reason: "wa_error", error: waResult.error };
+      } else {
+        notifResult = { sent: false, reason: "no_message_for_status" };
+      }
     } else {
-      console.warn("No bot credentials found for notification. phoneId:", phoneId, "to:", to);
+      const missing = [];
+      if (!phoneId) missing.push("phoneId");
+      if (!accessToken) missing.push("accessToken");
+      if (!to) missing.push("to (from_phone)");
+      notifResult = { sent: false, reason: "missing_credentials", missing };
+      console.warn("[citas PATCH] Missing for notification:", missing.join(", "));
     }
   } catch (e) {
     console.error("Notification error:", e.message);
-    // Status already updated — don't fail
+    notifResult = { sent: false, reason: "exception", error: e.message };
   }
 
-  return Response.json({ success: true });
+  return Response.json({ success: true, notification: notifResult });
 }

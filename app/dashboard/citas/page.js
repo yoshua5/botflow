@@ -133,12 +133,23 @@ export default function CitasPage() {
     }
     setNotifying(id);
     try {
-      await fetch(`/api/citas/${id}`, {
+      const r = await fetch(`/api/citas/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status, cancel_reason }),
       });
+      const d = await r.json();
+      if (!r.ok) { alert("Error: " + (d.error || r.status)); setNotifying(null); return; }
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+      if (d.notification) {
+        if (d.notification.sent) {
+          // success — no alert needed, status change is visible
+        } else if (d.notification.reason === "missing_credentials") {
+          alert(`⚠️ Estado actualizado, pero no se pudo enviar notificación WhatsApp.\nFalta: ${d.notification.missing?.join(", ")}.\nVerifica el token de acceso en Configuración del bot.`);
+        } else if (d.notification.reason === "wa_error") {
+          alert(`⚠️ Estado actualizado, pero WhatsApp rechazó el mensaje.\nError: ${d.notification.error?.substring(0, 200)}`);
+        }
+      }
     } catch(e) { alert("Error: " + e.message); }
     setNotifying(null);
   }
