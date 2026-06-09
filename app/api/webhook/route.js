@@ -404,11 +404,7 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
 
   // ── If user re-triggers intent while mid-flow, restart fresh ────────
   if (state?.collecting && APPT_INTENT.test(text)) {
-    {
-      let uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
-      if (botId) uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
-      await uq;
-    }
+    await db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
     // Fall through to intent detection below (state is now cleared in DB)
   }
   // ── Mid-collection: we already started asking questions ──────────────
@@ -416,11 +412,7 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     const { fields, currentIdx, data, availCfg } = state;
     const field = fields[currentIdx];
     if (!field) {
-      {
-        let uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
-        if (botId) uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
-        await uq;
-      }
+      await db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
       return false;
     }
 
@@ -432,12 +424,10 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     if (nextIdx < fields.length) {
       const nextField = fields[nextIdx];
       console.log(`💾 saving state [${from}] idx=${nextIdx} data=${JSON.stringify(newData)}`);
-      {
-        let uq = db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("from_phone", from);
-        if (botId) uq = db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
-        const { error: updErr } = await uq;
-        if (updErr) console.error("❌ appt state update error:", JSON.stringify(updErr));
-      }
+      const { error: updErr } = await db.from("conversations")
+        .update({ appointment_state: { collecting: true, fields, currentIdx: nextIdx, data: newData, availCfg }, updated_at: new Date().toISOString() })
+        .eq("user_id", userId).eq("from_phone", from);
+      if (updErr) console.error("❌ appt state update error:", JSON.stringify(updErr));
       await sendWhatsAppText(from, buildFieldQuestion(nextField, availCfg), config);
     } else {
       // All fields collected — save appointment
@@ -454,11 +444,7 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
       } else {
         console.log("✅ appointment saved for userId:", userId, "phone:", from);
       }
-      {
-        let uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
-        if (botId) uq = db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
-        await uq;
-      }
+      await db.from("conversations").update({ appointment_state: null }).eq("user_id", userId).eq("from_phone", from);
 
       // Build confirmation message with availability info if set
       let confirmMsg = "¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nTe confirmaremos pronto. ¡Gracias! 😊";
@@ -499,11 +485,7 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
     const { data: existingConv } = await db.from("conversations")
       .select("id").eq("user_id", userId).eq("from_phone", from).limit(1).maybeSingle();
     if (existingConv) {
-      {
-        let uq = db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("from_phone", from);
-        if (botId) uq = db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("bot_id", botId).eq("from_phone", from);
-        await uq;
-      }
+      await db.from("conversations").update({ appointment_state: { collecting: true, fields, currentIdx: 0, data: {}, availCfg }, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("from_phone", from);
     } else {
       await db.from("conversations").insert({
         user_id: userId, bot_id: botId, from_phone: from,
