@@ -427,6 +427,7 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
       await sendWhatsAppText(from, buildFieldQuestion(nextField, availCfg), config);
     } else {
       // All fields collected — save appointment
+      console.log(`💾 FINAL newData [${from}]:`, JSON.stringify(newData));
       const { error: apptInsertError } = await db.from("appointments").insert({
         user_id:      userId,
         bot_id:       botId || null,

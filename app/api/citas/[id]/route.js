@@ -1,24 +1,25 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
+import { decrypt } from "@/lib/crypto";
 
-const db = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function db() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
-async function sendWhatsAppText(to, message, phoneId, token) {
-  const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
-  await fetch(url, {
+async function sendWAText(to, body, phoneId, token) {
+  const r = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to,
-      type: "text",
-      text: { body: message },
-    }),
+    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
   });
+  if (!r.ok) {
+    const e = await r.text();
+    console.error("WA send error:", e);
+  }
 }
 
 export async function PATCH(req, { params }) {
@@ -35,66 +36,81 @@ export async function PATCH(req, { params }) {
     return Response.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  // Get the appointment
-  const { data: appt, error: fetchErr } = await db
+  const supabase = db();
+
+  // Get appointment
+  const { data: appt, error: fetchErr } = await supabase
     .from("appointments")
-    .select("*, bots(phone_number_id)")
+    .select("*")
     .eq("id", id)
     .eq("user_id", userId)
     .single();
 
   if (fetchErr || !appt) {
+    console.error("Appointment fetch error:", fetchErr?.message);
     return Response.json({ error: "Appointment not found" }, { status: 404 });
   }
 
-  // Update status (and optionally store cancel_reason in data)
+  // Update status + optionally store cancellation reason
   const updatedData = { ...(appt.data || {}) };
-  if (status === "cancelada" && cancel_reason) {
-    updatedData._cancel_reason = cancel_reason;
-  }
+  if (status === "cancelada" && cancel_reason) updatedData._cancel_reason = cancel_reason;
 
-  const { error: updateErr } = await db
+  const { error: updateErr } = await supabase
     .from("appointments")
     .update({ status, data: updatedData })
     .eq("id", id)
     .eq("user_id", userId);
 
-  if (updateErr) {
-    return Response.json({ error: updateErr.message }, { status: 500 });
-  }
+  if (updateErr) return Response.json({ error: updateErr.message }, { status: 500 });
 
-  // Send WhatsApp notification to the user
+  // Send WhatsApp notification
   try {
-    const { data: botConfig } = await db
-      .from("bots")
-      .select("phone_number_id, meta_access_token")
-      .eq("id", appt.bot_id)
-      .single();
+    // Get bot credentials — try appt.bot_id first, fallback to any bot for this user
+    let phoneId = null, accessToken = null;
 
-    if (botConfig?.phone_number_id && botConfig?.meta_access_token) {
-      const nombre = appt.data?.nombre_completo || appt.data?.nombre || appt.contact_name || "Cliente";
+    const botId = appt.bot_id;
+    if (botId) {
+      const { data: bot } = await supabase.from("bots").select("phone_number_id").eq("id", botId).single();
+      const { data: sec } = await supabase.from("bot_secrets").select("access_token_enc").eq("bot_id", botId).single();
+      phoneId = bot?.phone_number_id;
+      accessToken = sec?.access_token_enc ? decrypt(sec.access_token_enc) : null;
+    }
+
+    // Fallback: first active bot for this user
+    if (!phoneId || !accessToken) {
+      const { data: bots } = await supabase.from("bots").select("id, phone_number_id").eq("user_id", userId).limit(1);
+      const firstBot = bots?.[0];
+      if (firstBot) {
+        const { data: sec } = await supabase.from("bot_secrets").select("access_token_enc").eq("bot_id", firstBot.id).single();
+        phoneId = firstBot.phone_number_id;
+        accessToken = sec?.access_token_enc ? decrypt(sec.access_token_enc) : null;
+      }
+    }
+
+    const to = appt.from_phone;
+    const nombre = appt.data?.nombre_completo || appt.data?.nombre || appt.contact_name || "Cliente";
+
+    if (phoneId && accessToken && to) {
       let msg = "";
-
       if (status === "confirmada") {
         msg = `✅ *¡Cita Confirmada!*\n\nHola ${nombre}, tu cita ha sido *confirmada* exitosamente.`;
         if (appt.data?.fecha_deseada) msg += `\n📅 Fecha: ${appt.data.fecha_deseada}`;
-        if (appt.data?.hora_deseada) msg += `\n🕐 Hora: ${appt.data.hora_deseada}`;
+        if (appt.data?.hora_deseada)  msg += `\n🕐 Hora: ${appt.data.hora_deseada}`;
         msg += `\n\n¡Te esperamos! 😊`;
       } else if (status === "cancelada") {
-        msg = `❌ *Cita Cancelada*\n\nHola ${nombre}, lamentablemente tu cita ha sido *cancelada*.`;
+        msg = `❌ *Cita Cancelada*\n\nHola ${nombre}, tu cita ha sido *cancelada*.`;
         if (cancel_reason) msg += `\n\n*Motivo:* ${cancel_reason}`;
-        msg += `\n\nSi deseas reagendar, por favor contáctanos. 🙏`;
+        msg += `\n\nSi deseas reagendar, contáctanos. 🙏`;
       } else if (status === "pendiente") {
         msg = `⏳ *Cita en revisión*\n\nHola ${nombre}, tu cita está siendo revisada. Te notificaremos pronto.`;
       }
-
-      if (msg) {
-        await sendWhatsAppText(appt.contact_phone || appt.from_phone, msg, botConfig.phone_number_id, botConfig.meta_access_token);
-      }
+      if (msg) await sendWAText(to, msg, phoneId, accessToken);
+    } else {
+      console.warn("No bot credentials found for notification. phoneId:", phoneId, "to:", to);
     }
-  } catch (notifErr) {
-    console.error("WhatsApp notification error:", notifErr.message);
-    // Don't fail the request — status was already updated
+  } catch (e) {
+    console.error("Notification error:", e.message);
+    // Status already updated — don't fail
   }
 
   return Response.json({ success: true });
