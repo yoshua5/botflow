@@ -21,24 +21,26 @@ export async function POST(req) {
 
   const imageBuffer = Buffer.from(imageBase64, "base64");
 
-  // Step 1: Create upload session using /app/uploads (correct node for WA profile pictures)
-  const sessionUrl = `https://graph.facebook.com/v19.0/app/uploads?file_length=${imageBuffer.length}&file_type=${encodeURIComponent(mimeType)}&file_name=profile.jpg`;
-  const sessionRes = await fetch(sessionUrl,
+  // Step 1: Create upload session
+  const sessionRes = await fetch(
+    `https://graph.facebook.com/v19.0/app/uploads?file_length=${imageBuffer.length}&file_type=${encodeURIComponent(mimeType)}&file_name=profile.jpg`,
     { method: "POST", headers: { Authorization: `Bearer ${token}` } }
   );
   const sessionData = await sessionRes.json();
   if (!sessionRes.ok) {
-    const errMsg = sessionData.error?.message || JSON.stringify(sessionData);
-    const errCode = sessionData.error?.code || "";
-    return Response.json({ error: `[session ${errCode}] ${errMsg}` }, { status: 400 });
+    return Response.json({ error: `[session ${sessionData.error?.code}] ${sessionData.error?.message || JSON.stringify(sessionData)}` }, { status: 400 });
   }
 
-  // Step 2: Upload file bytes to the session
+  // Step 2: Upload file bytes to graph.facebook.com/{upload-session-id}
   const uploadRes = await fetch(
-    `https://rupload.facebook.com/whatsapp-business-media/${sessionData.id}`,
+    `https://graph.facebook.com/v19.0/${sessionData.id}`,
     {
       method: "POST",
-      headers: { Authorization: `OAuth ${token}`, "file_offset": "0", "Content-Type": mimeType },
+      headers: {
+        Authorization: `OAuth ${token}`,
+        "file_offset": "0",
+        "Content-Type": "application/octet-stream",
+      },
       body: imageBuffer,
     }
   );
@@ -48,7 +50,7 @@ export async function POST(req) {
     return Response.json({ error: `[upload] ${errMsg}` }, { status: 400 });
   }
 
-  // Step 3: Set profile picture with the upload handle
+  // Step 3: Set profile picture with handle
   const profileRes = await fetch(
     `https://graph.facebook.com/v19.0/${phoneNumberId}/whatsapp_business_profile`,
     {
@@ -59,9 +61,7 @@ export async function POST(req) {
   );
   const profileData = await profileRes.json();
   if (!profileRes.ok) {
-    const errMsg = profileData.error?.message || JSON.stringify(profileData);
-    const errCode = profileData.error?.code || "";
-    return Response.json({ error: `[perfil ${errCode}] ${errMsg}` }, { status: 400 });
+    return Response.json({ error: `[perfil ${profileData.error?.code}] ${profileData.error?.message || JSON.stringify(profileData)}` }, { status: 400 });
   }
 
   return Response.json({ success: true });
