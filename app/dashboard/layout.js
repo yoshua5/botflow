@@ -3,12 +3,33 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 
-// ── Dynamic <title> + <link rel="icon"> from config ──────
+// ── AgentFlow Logo SVG ────────────────────────────────────
+function AgentLogo({ size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="36" height="36" rx="10" fill="#0F172A"/>
+      <path d="M18 6L26 26H10L18 6Z" fill="url(#logoGrad)" opacity="0.95"/>
+      <ellipse cx="15" cy="23" rx="5" ry="4" fill="none" stroke="#22D3EE" strokeWidth="1.8"/>
+      <circle cx="13.5" cy="23" r="0.8" fill="#22D3EE"/>
+      <circle cx="15.5" cy="23" r="0.8" fill="#22D3EE"/>
+      <line x1="22" y1="18" x2="27" y2="18" stroke="#22D3EE" strokeWidth="1.6" strokeLinecap="round"/>
+      <line x1="22" y1="21" x2="26" y2="21" stroke="#3B82F6" strokeWidth="1.4" strokeLinecap="round"/>
+      <line x1="22" y1="24" x2="25" y2="24" stroke="#60A5FA" strokeWidth="1.2" strokeLinecap="round"/>
+      <defs>
+        <linearGradient id="logoGrad" x1="18" y1="6" x2="18" y2="26" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFFFFF"/>
+          <stop offset="1" stopColor="#93C5FD"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+// ── Dynamic <title> + favicon ─────────────────────────────
 function DynamicHead() {
   useEffect(() => {
     fetch("/api/config").then(r => r.json()).then(cfg => {
       if (cfg.siteName) document.title = cfg.siteName;
-      // Update favicon link tag
       let link = document.querySelector("link[rel~='icon']");
       if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
       link.href = `/api/favicon?t=${Date.now()}`;
@@ -17,18 +38,49 @@ function DynamicHead() {
   return null;
 }
 
-const BLUE = "#2563EB";
-const BLUE_LIGHT = "#EFF6FF";
-const TEXT = "#0F172A";
-const MUTED = "#64748B";
-const WHITE = "#FFFFFF";
+// ── Design tokens ─────────────────────────────────────────
+const T = {
+  blue:    "#2563EB",
+  blueL:   "#EFF6FF",
+  blueM:   "#DBEAFE",
+  text:    "#0F172A",
+  muted:   "#64748B",
+  border:  "#E2E8F0",
+  bg:      "#F8FAFF",
+  white:   "#FFFFFF",
+  green:   "#10B981",
+  red:     "#EF4444",
+  surface: "#F1F5F9",
+};
 
-const NAV_ITEMS = [
-  { icon: "▦",  label: "Dashboard",    href: "/dashboard" },
-  { icon: "🤖", label: "My Bots",      href: "/dashboard/bots" },
-  { icon: "📊", label: "Analytics",    href: "/dashboard/analytics" },
-  { icon: "📅", label: "Citas",        href: "/dashboard/citas" },
-  { icon: "👥", label: "Contactos",    href: "/dashboard/contactos" },
+// ── Nav structure ─────────────────────────────────────────
+const GROUPS = [
+  {
+    label: "WORKSPACE",
+    items: [
+      { icon: "⊞", label: "Dashboard",  href: "/dashboard" },
+      { icon: "📊", label: "Analytics",  href: "/dashboard/analytics" },
+    ],
+  },
+  {
+    label: "AUTOMATIZACIÓN",
+    items: [
+      { icon: "🤖", label: "Mis Bots",   href: "/dashboard/bots" },
+    ],
+    extra: "catalogos",
+  },
+  {
+    label: "CLIENTES",
+    items: [
+      { icon: "👥", label: "Contactos",  href: "/dashboard/contactos" },
+      { icon: "📅", label: "Citas",      href: "/dashboard/citas" },
+    ],
+  },
+  {
+    label: "CONFIGURACIÓN",
+    items: [],
+    extra: "config",
+  },
 ];
 
 const CATALOGOS_CHILDREN = [
@@ -38,238 +90,245 @@ const CATALOGOS_CHILDREN = [
 ];
 
 const CONFIG_CHILDREN = [
-  { icon: "👤", label: "Cuenta",       href: "/dashboard/configuracion/cuenta" },
-  { icon: "🔌", label: "Conexiones",   href: "/dashboard/configuracion/conexiones" },
-  { icon: "🤖", label: "Agentes",      href: "/dashboard/configuracion/agentes" },
+  { icon: "👤", label: "Cuenta",      href: "/dashboard/configuracion/cuenta" },
+  { icon: "🔌", label: "Conexiones",  href: "/dashboard/configuracion/conexiones" },
+  { icon: "🤖", label: "Agentes",     href: "/dashboard/configuracion/agentes" },
 ];
 
+// ── Nav Item ──────────────────────────────────────────────
+function NavItem({ icon, label, href, active, collapsed, depth = 0 }) {
+  return (
+    <a href={href} style={{
+      display: "flex", alignItems: "center", gap: 10,
+      padding: collapsed ? "9px 14px" : depth > 0 ? "7px 10px 7px 14px" : "9px 12px",
+      borderRadius: 8,
+      background: active ? T.blueL : "transparent",
+      color: active ? T.blue : T.muted,
+      textDecoration: "none",
+      fontWeight: active ? 700 : 500,
+      fontSize: depth > 0 ? 13 : 14,
+      transition: "all 0.12s",
+      justifyContent: collapsed ? "center" : "flex-start",
+      borderLeft: active && !collapsed ? `3px solid ${T.blue}` : "3px solid transparent",
+      marginLeft: depth > 0 ? 8 : 0,
+      position: "relative",
+    }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = T.text; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.muted; } }}>
+      <span style={{ fontSize: depth > 0 ? 14 : 16, flexShrink: 0, lineHeight: 1 }}>{icon}</span>
+      {!collapsed && <span style={{ lineHeight: 1.2 }}>{label}</span>}
+    </a>
+  );
+}
+
+// ── Sidebar ───────────────────────────────────────────────
 function Sidebar({ collapsed }) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const email = session?.user?.email;
+  const email = session?.user?.email || "";
   const isSuperAdmin = email === "yoshualeisorek17@gmail.com";
   const isCatalogosActive = pathname.startsWith("/dashboard/catalogos");
-  const isConfigActive = pathname.startsWith("/dashboard/configuracion");
+  const isConfigActive    = pathname.startsWith("/dashboard/configuracion");
   const [catalogosOpen, setCatalogosOpen] = useState(isCatalogosActive);
-  const [configOpen, setConfigOpen] = useState(isConfigActive);
+  const [configOpen,    setConfigOpen]    = useState(isConfigActive);
+  const [planName, setPlanName]  = useState("FREE");
+  const [siteName, setSiteName]  = useState("");
 
-  // Fetch real subscription plan from server
-  const [planName, setPlanName] = useState("...");
-  const [siteName, setSiteName] = useState("");
   useEffect(() => {
     fetch("/api/config").then(r=>r.json()).then(c=>{ if(c.siteName) setSiteName(c.siteName); }).catch(()=>{});
+    fetch("/api/subscription").then(r=>r.json()).then(d=>setPlanName(d.plan||"FREE")).catch(()=>{});
   }, []);
-  useEffect(() => {
-    if (!session) return;
-    fetch("/api/subscription")
-      .then(r => r.json())
-      .then(d => setPlanName(d.plan || "FREE PLAN"))
-      .catch(() => setPlanName("FREE PLAN"));
-  }, [session]);
 
-  const isFree = planName === "FREE PLAN" || planName === "...";
-  const planColor = isFree ? BLUE : "#8B5CF6";
+  const isFree = planName === "FREE" || planName === "FREE PLAN" || planName === "...";
+
   return (
     <aside style={{
       width: collapsed ? 64 : 240,
       minHeight: "100vh",
-      background: WHITE,
-      borderRight: "1px solid #E2E8F0",
-      display: "flex",
-      flexDirection: "column",
-      transition: "width 0.25s ease",
-      flexShrink: 0,
-      position: "fixed",
-      top: 0,
-      left: 0,
-      bottom: 0,
-      zIndex: 50,
+      background: T.white,
+      borderRight: `1px solid ${T.border}`,
+      display: "flex", flexDirection: "column",
+      transition: "width 0.22s ease",
+      flexShrink: 0, position: "fixed",
+      top: 0, left: 0, bottom: 0, zIndex: 50,
       overflow: "hidden",
     }}>
-      {/* Logo */}
-      <div style={{ padding: "20px 16px 8px", borderBottom: "1px solid #F1F5F9" }}>
+
+      {/* ── Logo ── */}
+      <div style={{ padding: "16px 12px 12px", borderBottom: `1px solid ${T.surface}` }}>
         <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: BLUE, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>💬</div>
+          <div style={{ flexShrink: 0 }}><AgentLogo size={36} /></div>
           {!collapsed && (
             <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: TEXT, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{siteName || "Bot"}<span style={{ color: BLUE }}>{siteName ? "" : "flow"}</span></div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: planColor, letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 2 }}>
-                {planName}
+              <div style={{ fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: "-0.03em", lineHeight: 1.1 }}>
+                {siteName || <span>Agent<span style={{ color: T.blue }}>Flow</span></span>}
+              </div>
+              <div style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                textTransform: "uppercase", marginTop: 2,
+                color: isFree ? T.blue : "#8B5CF6",
+                background: isFree ? T.blueL : "#F3E8FF",
+                padding: "1px 6px", borderRadius: 4, display: "inline-block",
+              }}>
+                {isFree ? "FREE" : planName}
               </div>
             </div>
           )}
         </a>
       </div>
 
-      {/* Nav items */}
-      <nav style={{ flex: 1, padding: "12px 8px", display: "flex", flexDirection: "column", gap: 2 }}>
-        {NAV_ITEMS.map(item => {
-          const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-          return (
-            <a key={item.href} href={item.href} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: collapsed ? "10px" : "10px 12px",
-              borderRadius: 10,
-              background: active ? BLUE_LIGHT : "transparent",
-              color: active ? BLUE : MUTED,
-              textDecoration: "none",
-              fontWeight: active ? 700 : 500,
-              fontSize: 14,
-              transition: "all 0.15s",
-              justifyContent: collapsed ? "center" : "flex-start",
-            }}
-              onMouseEnter={e => { if (!active) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
-              onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
-              {!collapsed && <span>{item.label}</span>}
-            </a>
-          );
-        })}
-
-        {/* Catálogos dropdown */}
-        <div>
-          <button onClick={() => setCatalogosOpen(o => !o)} style={{
-            display: "flex", alignItems: "center", gap: 10, width: "100%",
-            padding: collapsed ? "10px" : "10px 12px",
-            borderRadius: 10, border: "none", cursor: "pointer",
-            background: isCatalogosActive ? BLUE_LIGHT : "transparent",
-            color: isCatalogosActive ? BLUE : MUTED,
-            fontWeight: isCatalogosActive ? 700 : 500,
-            fontSize: 14, transition: "all 0.15s",
-            justifyContent: collapsed ? "center" : "flex-start",
-          }}
-            onMouseEnter={e => { if (!isCatalogosActive) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
-            onMouseLeave={e => { if (!isCatalogosActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>📂</span>
-            {!collapsed && <>
-              <span style={{ flex: 1, textAlign: "left" }}>Catálogos</span>
-              <span style={{ fontSize: 11, transition: "transform 0.2s", transform: catalogosOpen ? "rotate(180deg)" : "none" }}>▾</span>
-            </>}
-          </button>
-          {catalogosOpen && !collapsed && (
-            <div style={{ paddingLeft: 16, display: "flex", flexDirection: "column", gap: 1, marginTop: 2 }}>
-              {CATALOGOS_CHILDREN.map(child => {
-                const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
-                return (
-                  <a key={child.href} href={child.href} style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "7px 10px", borderRadius: 8,
-                    background: childActive ? BLUE_LIGHT : "transparent",
-                    color: childActive ? BLUE : MUTED,
-                    textDecoration: "none", fontSize: 13,
-                    fontWeight: childActive ? 700 : 400,
-                    transition: "all 0.15s",
-                  }}
-                    onMouseEnter={e => { if (!childActive) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
-                    onMouseLeave={e => { if (!childActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}>
-                    <span style={{ fontSize: 14 }}>{child.icon}</span>
-                    <span>{child.label}</span>
-                  </a>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Configuración dropdown */}
-        <div>
-          <button onClick={() => setConfigOpen(o => !o)} style={{
-            display: "flex", alignItems: "center", gap: 10, width: "100%",
-            padding: collapsed ? "10px" : "10px 12px",
-            borderRadius: 10, border: "none", cursor: "pointer",
-            background: isConfigActive ? BLUE_LIGHT : "transparent",
-            color: isConfigActive ? BLUE : MUTED,
-            fontWeight: isConfigActive ? 700 : 500,
-            fontSize: 14, transition: "all 0.15s",
-            justifyContent: collapsed ? "center" : "flex-start",
-          }}
-            onMouseEnter={e => { if (!isConfigActive) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
-            onMouseLeave={e => { if (!isConfigActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>⚙️</span>
-            {!collapsed && <>
-              <span style={{ flex: 1, textAlign: "left" }}>Configuración</span>
-              <span style={{ fontSize: 11, transition: "transform 0.2s", transform: configOpen ? "rotate(180deg)" : "none" }}>▾</span>
-            </>}
-          </button>
-          {configOpen && !collapsed && (
-            <div style={{ paddingLeft: 16, display: "flex", flexDirection: "column", gap: 1, marginTop: 2 }}>
-              {CONFIG_CHILDREN.map(child => {
-                const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
-                return (
-                  <a key={child.href} href={child.href} style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "7px 10px", borderRadius: 8,
-                    background: childActive ? BLUE_LIGHT : "transparent",
-                    color: childActive ? BLUE : MUTED,
-                    textDecoration: "none", fontSize: 13,
-                    fontWeight: childActive ? 700 : 400,
-                    transition: "all 0.15s",
-                  }}
-                    onMouseEnter={e => { if (!childActive) { e.currentTarget.style.background = "#F8FAFF"; e.currentTarget.style.color = TEXT; } }}
-                    onMouseLeave={e => { if (!childActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MUTED; } }}>
-                    <span style={{ fontSize: 14 }}>{child.icon}</span>
-                    <span>{child.label}</span>
-                  </a>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </nav>
-
-      {/* Bottom section */}
-      <div style={{ padding: "8px", borderTop: "1px solid #F1F5F9" }}>
+      {/* ── Create New Bot CTA ── */}
+      <div style={{ padding: "10px 10px 0" }}>
         <a href="/dashboard/create" style={{
           display: "flex", alignItems: "center", gap: 8,
-          padding: collapsed ? "10px" : "12px 16px",
-          background: BLUE, borderRadius: 12, textDecoration: "none",
-          color: WHITE, fontWeight: 700, fontSize: 14,
-          marginBottom: 8, justifyContent: collapsed ? "center" : "flex-start",
-          boxShadow: "0 2px 8px rgba(37,99,235,0.3)", transition: "all 0.2s",
+          padding: collapsed ? "9px 0" : "10px 14px",
+          background: T.blue, borderRadius: 10, textDecoration: "none",
+          color: T.white, fontWeight: 700, fontSize: 13,
+          justifyContent: collapsed ? "center" : "flex-start",
+          boxShadow: "0 2px 8px rgba(37,99,235,0.28)",
+          transition: "all 0.15s",
         }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = BLUE; }}>
-          <span style={{ fontSize: 16, fontWeight: 800 }}>+</span>
-          {!collapsed && <span>Create New Bot</span>}
+          onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; e.currentTarget.style.boxShadow = "0 4px 14px rgba(37,99,235,0.4)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = T.blue; e.currentTarget.style.boxShadow = "0 2px 8px rgba(37,99,235,0.28)"; }}>
+          <span style={{ fontSize: 15, fontWeight: 900 }}>+</span>
+          {!collapsed && <span>Nuevo Bot</span>}
         </a>
-        
-        {isSuperAdmin && (
-          <a href="/dashboard/admin" style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: collapsed ? "10px" : "10px 16px",
-            background: "#1E293B", borderRadius: 12, textDecoration: "none",
-            color: WHITE, fontWeight: 700, fontSize: 13,
-            marginBottom: 8, justifyContent: collapsed ? "center" : "flex-start",
-            transition: "background 0.2s",
-          }} onMouseEnter={e => e.currentTarget.style.background = "#0F172A"} onMouseLeave={e => e.currentTarget.style.background = "#1E293B"}>
-            <span style={{ fontSize: 16 }}>👑</span>
-            {!collapsed && <span>Super Admin</span>}
-          </a>
-        )}
+      </div>
 
-        {[
-          { icon: "❓", label: "Help Center", href: "#" },
-          { icon: "👤", label: "Account", href: "#" },
-        ].map(item => (
-          <a key={item.label} href={item.href} style={{
-            display: "flex", alignItems: "center", gap: 10,
-            padding: collapsed ? "8px" : "8px 12px",
-            borderRadius: 8, color: MUTED, textDecoration: "none",
-            fontSize: 14, transition: "all 0.15s",
-            justifyContent: collapsed ? "center" : "flex-start",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.color = TEXT; e.currentTarget.style.background = "#F8FAFF"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = MUTED; e.currentTarget.style.background = "transparent"; }}>
-            <span style={{ fontSize: 15 }}>{item.icon}</span>
-            {!collapsed && <span>{item.label}</span>}
-          </a>
+      {/* ── Nav groups ── */}
+      <nav style={{ flex: 1, padding: "8px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
+        {GROUPS.map((group, gi) => (
+          <div key={gi} style={{ marginTop: gi > 0 ? 8 : 4 }}>
+            {/* Group label */}
+            {!collapsed && (
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.1em", padding: "6px 12px 4px", textTransform: "uppercase" }}>
+                {group.label}
+              </div>
+            )}
+            {collapsed && gi > 0 && <div style={{ height: 1, background: T.surface, margin: "4px 8px 4px" }} />}
+
+            {/* Regular items */}
+            {group.items.map(item => {
+              const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              return (
+                <NavItem key={item.href} {...item} active={active} collapsed={collapsed} />
+              );
+            })}
+
+            {/* Catálogos dropdown */}
+            {group.extra === "catalogos" && (
+              <div>
+                <button onClick={() => setCatalogosOpen(o => !o)} style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%",
+                  padding: collapsed ? "9px 14px" : "9px 12px",
+                  borderRadius: 8, border: "none", cursor: "pointer",
+                  background: isCatalogosActive ? T.blueL : "transparent",
+                  color: isCatalogosActive ? T.blue : T.muted,
+                  fontWeight: isCatalogosActive ? 700 : 500,
+                  fontSize: 14, transition: "all 0.12s",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                  borderLeft: isCatalogosActive && !collapsed ? `3px solid ${T.blue}` : "3px solid transparent",
+                }}
+                  onMouseEnter={e => { if (!isCatalogosActive) { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = T.text; } }}
+                  onMouseLeave={e => { if (!isCatalogosActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.muted; } }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>📂</span>
+                  {!collapsed && <>
+                    <span style={{ flex: 1, textAlign: "left" }}>Catálogos</span>
+                    <span style={{ fontSize: 10, transition: "transform 0.2s", transform: catalogosOpen ? "rotate(180deg)" : "none", color: "#94A3B8" }}>▾</span>
+                  </>}
+                </button>
+                {catalogosOpen && !collapsed && (
+                  <div style={{ paddingLeft: 8, marginTop: 2 }}>
+                    {CATALOGOS_CHILDREN.map(child => {
+                      const a = pathname === child.href || pathname.startsWith(child.href + "/");
+                      return <NavItem key={child.href} {...child} active={a} collapsed={false} depth={1} />;
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Config dropdown */}
+            {group.extra === "config" && (
+              <div>
+                <button onClick={() => setConfigOpen(o => !o)} style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%",
+                  padding: collapsed ? "9px 14px" : "9px 12px",
+                  borderRadius: 8, border: "none", cursor: "pointer",
+                  background: isConfigActive ? T.blueL : "transparent",
+                  color: isConfigActive ? T.blue : T.muted,
+                  fontWeight: isConfigActive ? 700 : 500,
+                  fontSize: 14, transition: "all 0.12s",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                  borderLeft: isConfigActive && !collapsed ? `3px solid ${T.blue}` : "3px solid transparent",
+                }}
+                  onMouseEnter={e => { if (!isConfigActive) { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = T.text; } }}
+                  onMouseLeave={e => { if (!isConfigActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.muted; } }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>⚙️</span>
+                  {!collapsed && <>
+                    <span style={{ flex: 1, textAlign: "left" }}>Configuración</span>
+                    <span style={{ fontSize: 10, transition: "transform 0.2s", transform: configOpen ? "rotate(180deg)" : "none", color: "#94A3B8" }}>▾</span>
+                  </>}
+                </button>
+                {configOpen && !collapsed && (
+                  <div style={{ paddingLeft: 8, marginTop: 2 }}>
+                    {CONFIG_CHILDREN.map(child => {
+                      const a = pathname === child.href;
+                      return <NavItem key={child.href} {...child} active={a} collapsed={false} depth={1} />;
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         ))}
+
+        {/* Super Admin */}
+        {isSuperAdmin && (
+          <div style={{ marginTop: 8 }}>
+            {!collapsed && <div style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.1em", padding: "6px 12px 4px", textTransform: "uppercase" }}>ADMIN</div>}
+            <NavItem icon="👑" label="Super Admin" href="/dashboard/admin" active={pathname === "/dashboard/admin"} collapsed={collapsed} />
+          </div>
+        )}
+      </nav>
+
+      {/* ── Bottom: help + account ── */}
+      <div style={{ padding: "8px 8px 12px", borderTop: `1px solid ${T.surface}` }}>
+        <NavItem icon="❓" label="Ayuda" href="#" active={false} collapsed={collapsed} />
+        <div style={{ height: 1, background: T.surface, margin: "4px 4px" }} />
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: collapsed ? "6px 8px" : "8px 10px",
+          borderRadius: 8, cursor: "pointer",
+          justifyContent: collapsed ? "center" : "flex-start",
+        }}
+          onClick={() => signOut({ callbackUrl: "/sign-in" })}
+          title="Cerrar sesión"
+          onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8, background: T.blue,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 13, fontWeight: 700, color: T.white, flexShrink: 0,
+          }}>
+            {email?.charAt(0).toUpperCase() || "U"}
+          </div>
+          {!collapsed && (
+            <div style={{ overflow: "hidden", flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {session?.user?.name || email.split("@")[0]}
+              </div>
+              <div style={{ fontSize: 10, color: "#EF4444", fontWeight: 600 }}>Cerrar sesión</div>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );
 }
 
-function TopBar({ sidebarWidth }) {
+// ── Top Bar ───────────────────────────────────────────────
+function TopBar({ sidebarWidth, collapsed, setCollapsed }) {
   const { data: session } = useSession();
   const displayName = session?.user?.name || session?.user?.email?.split("@")[0] || "Usuario";
   const email = session?.user?.email || "";
@@ -277,257 +336,163 @@ function TopBar({ sidebarWidth }) {
   return (
     <header style={{
       position: "fixed", top: 0, left: sidebarWidth, right: 0, height: 60, zIndex: 40,
-      background: WHITE, borderBottom: "1px solid #E2E8F0",
-      display: "flex", alignItems: "center", padding: "0 24px", gap: 16,
-      transition: "left 0.25s ease",
+      background: T.white, borderBottom: `1px solid ${T.border}`,
+      display: "flex", alignItems: "center", padding: "0 20px 0 16px", gap: 12,
+      transition: "left 0.22s ease",
     }}>
+      {/* Collapse toggle */}
+      <button onClick={() => setCollapsed(c => !c)} style={{
+        width: 34, height: 34, borderRadius: 8, border: `1.5px solid ${T.border}`,
+        background: T.white, cursor: "pointer", fontSize: 14, color: T.muted,
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        transition: "all 0.15s",
+      }}
+        onMouseEnter={e => { e.currentTarget.style.background = T.blueL; e.currentTarget.style.borderColor = "#93C5FD"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = T.white; e.currentTarget.style.borderColor = T.border; }}
+        title={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}>
+        {collapsed ? "☰" : "☰"}
+      </button>
+
       {/* Search */}
-      <div style={{ flex: 1, maxWidth: 400, position: "relative" }}>
-        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#94A3B8" }}>🔍</span>
+      <div style={{ flex: 1, maxWidth: 420, position: "relative" }}>
+        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#94A3B8", pointerEvents: "none" }}>🔍</span>
         <input
-          placeholder="Search bots or activity..."
+          placeholder="Buscar bots, contactos, actividad..."
           style={{
-            width: "100%", padding: "8px 12px 8px 36px",
-            background: "#F8FAFF", border: "1.5px solid #E2E8F0", borderRadius: 10,
-            fontSize: 14, color: TEXT, outline: "none", fontFamily: "inherit",
-            transition: "border-color 0.2s",
+            width: "100%", padding: "8px 12px 8px 34px",
+            background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: 8,
+            fontSize: 13, color: T.text, outline: "none", fontFamily: "inherit",
+            transition: "all 0.15s",
           }}
-          onFocus={e => e.target.style.borderColor = "#93C5FD"}
-          onBlur={e => e.target.style.borderColor = "#E2E8F0"}
+          onFocus={e => { e.target.style.borderColor = "#93C5FD"; e.target.style.background = T.white; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.1)"; }}
+          onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.surface; e.target.style.boxShadow = "none"; }}
         />
       </div>
+
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-        {/* Notifications */}
-        <button style={{ width: 36, height: 36, borderRadius: 9, background: "#F8FAFF", border: "1.5px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, position: "relative" }}>
+        {/* Notification bell */}
+        <button style={{
+          width: 36, height: 36, borderRadius: 8, background: T.white, border: `1.5px solid ${T.border}`,
+          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, position: "relative",
+          transition: "all 0.15s",
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background = T.blueL; e.currentTarget.style.borderColor = "#93C5FD"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = T.white; e.currentTarget.style.borderColor = T.border; }}>
           🔔
-          <span style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderRadius: "50%", background: "#EF4444", border: "1.5px solid white" }} />
+          <span style={{ position: "absolute", top: 7, right: 7, width: 7, height: 7, borderRadius: "50%", background: "#EF4444", border: "1.5px solid white" }} />
         </button>
-        {/* User card + Clerk UserButton */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 4px 4px 12px", borderRadius: 10, border: "1.5px solid #E2E8F0", background: WHITE }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{displayName}</div>
-            <div style={{ fontSize: 11, color: MUTED, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</div>
+
+        {/* User info */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "4px 12px 4px 8px", borderRadius: 9,
+          border: `1.5px solid ${T.border}`, background: T.white,
+        }}>
+          <div style={{
+            width: 30, height: 30, borderRadius: 8, background: T.blue,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 13, fontWeight: 800, color: T.white, flexShrink: 0,
+          }}>
+            {email?.charAt(0).toUpperCase() || "U"}
           </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/sign-in" })}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: "#2563EB",
-              color: "white",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            title="Sign out"
-          >
-            {email?.charAt(0).toUpperCase()}
-          </button>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.2 }}>{displayName}</div>
+            <div style={{ fontSize: 11, color: T.muted, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2 }}>{email}</div>
+          </div>
         </div>
       </div>
     </header>
   );
 }
 
-// ── Floating Chat Test Widget ──────────────────────────────
+// ── Chat Widget ───────────────────────────────────────────
 function ChatWidget() {
-  const [open, setOpen]         = useState(false);
-  const [messages, setMessages] = useState([
-    { role: "bot", text: "¡Hola! Soy tu bot. Escríbeme o habla para probarlo 👋" }
-  ]);
-  const [input, setInput]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [open, setOpen]           = useState(false);
+  const [messages, setMessages]   = useState([{ role: "bot", text: "¡Hola! Soy tu agente virtual. Escríbeme algo para ver cómo respondo. 👋" }]);
+  const [input, setInput]         = useState("");
+  const [loading, setLoading]     = useState(false);
   const [listening, setListening] = useState(false);
-  const bottomRef = useRef(null);
+  const bottomRef   = useRef(null);
   const recognitionRef = useRef(null);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, open]);
 
   const send = async (text) => {
     if (!text.trim() || loading) return;
-    const userMsg = text.trim();
+    const msg = text.trim();
     setInput("");
-    setMessages(m => [...m, { role: "user", text: userMsg }]);
+    setMessages(m => [...m, { role: "user", text: msg }]);
     setLoading(true);
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg }),
-      });
+      const res  = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: msg }) });
       const data = await res.json();
       setMessages(m => [...m, { role: "bot", text: data.reply || "Sin respuesta." }]);
     } catch {
-      setMessages(m => [...m, { role: "bot", text: "❌ Error al conectar con el bot." }]);
+      setMessages(m => [...m, { role: "bot", text: "❌ Error al conectar." }]);
     }
     setLoading(false);
   };
 
   const startVoice = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome.");
-      return;
-    }
-    if (listening) {
-      recognitionRef.current?.stop();
-      setListening(false);
-      return;
-    }
-    const r = new SpeechRecognition();
-    r.lang = "es-MX";
-    r.interimResults = false;
-    r.maxAlternatives = 1;
-    r.onstart  = () => setListening(true);
-    r.onend    = () => setListening(false);
-    r.onerror  = () => setListening(false);
-    r.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      send(transcript);
-    };
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert("Tu navegador no soporta voz. Usa Chrome."); return; }
+    if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
+    const r = new SR();
+    r.lang = "es-MX"; r.interimResults = false; r.maxAlternatives = 1;
+    r.onstart = () => setListening(true);
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    r.onresult = (e) => send(e.results[0][0].transcript);
     recognitionRef.current = r;
     r.start();
   };
 
   return (
     <>
-      {/* Floating button */}
       <button onClick={() => setOpen(o => !o)} style={{
-        position: "fixed", bottom: 28, right: 28, width: 54, height: 54,
-        borderRadius: "50%", background: open ? "#1D4ED8" : BLUE,
-        border: "none", cursor: "pointer", zIndex: 300,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 22, color: WHITE, boxShadow: "0 6px 24px rgba(37,99,235,0.45)",
+        position: "fixed", bottom: 28, right: 28, width: 52, height: 52,
+        borderRadius: "50%", background: T.blue, border: "none", cursor: "pointer",
+        zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 20, color: T.white, boxShadow: "0 6px 24px rgba(37,99,235,0.4)",
         transition: "all 0.2s",
       }}
-        title="Probar bot"
         onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
-        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+        title="Probar agente">
         {open ? "✕" : "💬"}
       </button>
 
-      {/* Chat panel */}
       {open && (
         <div style={{
-          position: "fixed", bottom: 94, right: 28, width: 360, height: 500,
-          background: WHITE, borderRadius: 20, zIndex: 299,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.18)", border: "1.5px solid #E2E8F0",
+          position: "fixed", bottom: 92, right: 28, width: 360, height: 500,
+          background: T.white, borderRadius: 20, zIndex: 299,
+          boxShadow: "0 24px 60px rgba(0,0,0,0.16)", border: `1.5px solid ${T.border}`,
           display: "flex", flexDirection: "column", overflow: "hidden",
-          animation: "chatIn 0.2s ease",
+          animation: "chatIn 0.18s ease",
         }}>
-          {/* Header */}
-          <div style={{ background: BLUE, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: WHITE }}>Chat de Prueba</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Escribe o usa el micrófono 🎤</div>
+          <div style={{ background: T.blue, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.white }}>Chat de Prueba</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)" }}>Respuestas reales con IA</div>
             </div>
-            <div style={{ marginLeft: "auto", width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", boxShadow: "0 0 6px #4ADE80" }} />
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", boxShadow: "0 0 6px #4ADE80" }} />
           </div>
-
-          {/* Messages */}
           <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 8px", display: "flex", flexDirection: "column", gap: 10 }}>
             {messages.map((m, i) => (
               <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
                 <div style={{
-                  maxWidth: "80%", padding: "9px 13px", borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                  background: m.role === "user" ? BLUE : "#F1F5F9",
-                  color: m.role === "user" ? WHITE : TEXT,
+                  maxWidth: "80%", padding: "9px 13px",
+                  borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                  background: m.role === "user" ? T.blue : T.surface,
+                  color: m.role === "user" ? T.white : T.text,
                   fontSize: 13, lineHeight: 1.5,
-                }}>
-                  {m.text}
-                </div>
+                }}>{m.text}</div>
               </div>
             ))}
             {loading && (
-              <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                <div style={{ padding: "9px 14px", background: "#F1F5F9", borderRadius: "14px 14px 14px 4px", fontSize: 18 }}>
-                  <span style={{ animation: "pulse 1s infinite" }}>●</span><span style={{ animation: "pulse 1s infinite 0.2s" }}>●</span><span style={{ animation: "pulse 1s infinite 0.4s" }}>●</span>
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Input bar */}
-          <div style={{ padding: "10px 12px", borderTop: "1px solid #F1F5F9", display: "flex", gap: 8, alignItems: "center" }}>
-            {/* Mic button */}
-            <button onClick={startVoice} title={listening ? "Detener" : "Hablar"} style={{
-              width: 38, height: 38, borderRadius: "50%", border: "none", cursor: "pointer",
-              background: listening ? "#EF4444" : "#F1F5F9", flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 17, transition: "all 0.2s",
-              boxShadow: listening ? "0 0 0 4px rgba(239,68,68,0.25)" : "none",
-            }}>
-              {listening ? "⏹" : "🎤"}
-            </button>
-
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && send(input)}
-              placeholder={listening ? "Escuchando..." : "Escribe un mensaje..."}
-              disabled={loading || listening}
-              style={{
-                flex: 1, padding: "9px 12px", borderRadius: 12,
-                border: "1.5px solid #E2E8F0", fontSize: 13, outline: "none",
-                fontFamily: "inherit", background: listening ? "#FFF1F1" : WHITE,
-                color: TEXT, transition: "all 0.2s",
-              }}
-              onFocus={e => e.target.style.borderColor = "#93C5FD"}
-              onBlur={e => e.target.style.borderColor = "#E2E8F0"}
-            />
-
-            <button onClick={() => send(input)} disabled={!input.trim() || loading} style={{
-              width: 38, height: 38, borderRadius: "50%", border: "none",
-              background: input.trim() && !loading ? BLUE : "#E2E8F0",
-              cursor: input.trim() && !loading ? "pointer" : "not-allowed",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, color: WHITE, flexShrink: 0, transition: "all 0.2s",
-            }}>
-              ➤
-            </button>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes chatIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes pulse  { 0%,100%{opacity:0.3} 50%{opacity:1} }
-      `}</style>
-    </>
-  );
-}
-
-export default function DashboardLayout({ children }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const sidebarWidth = collapsed ? 64 : 240;
-
-  const checkingOnboarding = false; // Onboarding redirect handled at sign-up only
-
-  // Show blank while checking onboarding to avoid flash
-  if (checkingOnboarding) {
-    return <div style={{ minHeight: "100vh", background: "#F8FAFF" }} />;
-  }
-
-  return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFF", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <DynamicHead />
-      <Sidebar collapsed={collapsed} />
-      <div style={{ marginLeft: sidebarWidth, flex: 1, transition: "margin-left 0.25s ease" }}>
-        <TopBar sidebarWidth={sidebarWidth} />
-        <main style={{ marginTop: 60, padding: "32px 28px", minHeight: "calc(100vh - 60px)" }}>
-          {children}
-        </main>
-      </div>
-      <ChatWidget />
-    </div>
-  );
-}
+              <div style={{ display: "flex" }}>
+                <div style={{ padding: "10px 14px", background: T.surface, borderRadius: "14px 14px 14px 4px", fontSize: 18 }}>
+                  <span style={{ animation: "pulse 1s infinite" }}>●</span>
+                  <span style={{ animation: "pulse 1s infinite 0.2s" }}>●</span>
+       

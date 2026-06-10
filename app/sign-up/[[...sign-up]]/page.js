@@ -3,121 +3,120 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+function AgentLogo({ size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="36" height="36" rx="10" fill="#0F172A"/>
+      <path d="M18 6L26 26H10L18 6Z" fill="url(#lg3)" opacity="0.95"/>
+      <ellipse cx="15" cy="23" rx="5" ry="4" fill="none" stroke="#22D3EE" strokeWidth="1.8"/>
+      <circle cx="13.5" cy="23" r="0.8" fill="#22D3EE"/>
+      <circle cx="15.5" cy="23" r="0.8" fill="#22D3EE"/>
+      <line x1="22" y1="18" x2="27" y2="18" stroke="#22D3EE" strokeWidth="1.6" strokeLinecap="round"/>
+      <line x1="22" y1="21" x2="26" y2="21" stroke="#3B82F6" strokeWidth="1.4" strokeLinecap="round"/>
+      <line x1="22" y1="24" x2="25" y2="24" stroke="#60A5FA" strokeWidth="1.2" strokeLinecap="round"/>
+      <defs>
+        <linearGradient id="lg3" x1="18" y1="6" x2="18" y2="26" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFFFFF"/>
+          <stop offset="1" stopColor="#93C5FD"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
 export default function SignUpPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm]   = useState({ name: "", email: "", password: "" });
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError]   = useState("");
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.password.length < 6) { setError("La contraseña debe tener mínimo 6 caracteres."); return; }
     setLoading(true);
     setError("");
-
-    // 1. Register the user
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: form.email, password: form.password, name: form.name }),
     });
     const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error || "Error al crear cuenta");
-      setLoading(false);
-      return;
-    }
-
-    // 2. Auto-login
-    const result = await signIn("credentials", {
-      email: form.email,
-      password: form.password,
-      redirect: false,
-    });
-
+    if (!res.ok) { setError(data.error || "Error al crear cuenta."); setLoading(false); return; }
+    const result = await signIn("credentials", { email: form.email, password: form.password, redirect: false });
     setLoading(false);
-    if (result?.ok) {
-      router.push("/onboarding");
-    } else {
-      setError("Cuenta creada pero error al iniciar sesion. Usa el login.");
-    }
+    if (result?.ok) router.push("/onboarding");
+    else setError("Cuenta creada. Inicia sesión manualmente.");
   };
 
-  const inputStyle = {
-    width: "100%", padding: "13px 16px", background: "#1a1a2e",
-    border: "1.5px solid #2d2d4e", borderRadius: "10px",
-    fontSize: "14px", color: "#fff", outline: "none",
-    boxSizing: "border-box", fontFamily: "inherit",
+  const inputBase = {
+    width: "100%", padding: "11px 14px", border: "1.5px solid #E2E8F0",
+    borderRadius: 10, fontSize: 14, color: "#0F172A", outline: "none",
+    fontFamily: "inherit", background: "#FAFBFF", boxSizing: "border-box",
+    transition: "all 0.15s",
   };
+  const onFocus = e => { e.target.style.borderColor = "#93C5FD"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.1)"; e.target.style.background = "#fff"; };
+  const onBlur  = e => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; e.target.style.background = "#FAFBFF"; };
+
+  const FEATURES = [
+    { icon: "🤖", text: "Agentes de IA en minutos" },
+    { icon: "📱", text: "Integración con WhatsApp" },
+    { icon: "📊", text: "Analytics en tiempo real" },
+    { icon: "🔒", text: "Datos seguros y protegidos" },
+  ];
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0d0d1a", fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "48px 40px", maxWidth: 540 }}>
+    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Geist', system-ui, -apple-system, sans-serif" }}>
+
+      {/* ── Left: Form ── */}
+      <div style={{ flex: 1, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 32px", minWidth: 0 }}>
         <div style={{ width: "100%", maxWidth: 420 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f97316", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
-            <span style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>Bot<span style={{ color: "#f97316" }}>flow</span></span>
-          </div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: "#fff", margin: "0 0 6px" }}>Crear Cuenta</h1>
-          <p style={{ fontSize: 14, color: "#888", margin: "0 0 28px" }}>Comienza tu prueba gratis</p>
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label style={{ display: "block", marginBottom: 7, fontSize: 13, fontWeight: 600, color: "#ccc" }}>Nombre Completo</label>
-              <input type="text" value={form.name} onChange={set("name")} placeholder="Juan Perez" style={inputStyle}
-                onFocus={e => e.target.style.borderColor="#f97316"} onBlur={e => e.target.style.borderColor="#2d2d4e"} />
+          <div style={{ background: "#fff", borderRadius: 20, padding: "40px", border: "1px solid #E2E8F0", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 20px 50px rgba(0,0,0,0.07)" }}>
+            {/* Logo */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28, justifyContent: "center" }}>
+              <AgentLogo size={38} />
+              <span style={{ fontSize: 22, fontWeight: 900, color: "#0F172A", letterSpacing: "-0.03em" }}>
+                Agent<span style={{ color: "#2563EB" }}>Flow</span>
+              </span>
             </div>
-            <div>
-              <label style={{ display: "block", marginBottom: 7, fontSize: 13, fontWeight: 600, color: "#ccc" }}>Email</label>
-              <input type="email" value={form.email} onChange={set("email")} placeholder="tu@email.com" required style={inputStyle}
-                onFocus={e => e.target.style.borderColor="#f97316"} onBlur={e => e.target.style.borderColor="#2d2d4e"} />
+            <div style={{ textAlign: "center", marginBottom: 26 }}>
+              <h1 style={{ fontSize: 21, fontWeight: 800, color: "#0F172A", margin: "0 0 6px", letterSpacing: "-0.02em" }}>
+                Crea tu cuenta gratis
+              </h1>
+              <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Sin tarjeta de crédito · Plan FREE incluido</p>
             </div>
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#ccc" }}>Contrasena</label>
+
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Name */}
+              <div>
+                <label style={{ display: "block", marginBottom: 5, fontSize: 13, fontWeight: 600, color: "#0F172A" }}>Nombre completo</label>
+                <input type="text" value={form.name} onChange={set("name")} placeholder="Juan Pérez" style={inputBase} onFocus={onFocus} onBlur={onBlur} />
               </div>
-              <input type="password" value={form.password} onChange={set("password")} placeholder="Minimo 6 caracteres" required style={inputStyle}
-                onFocus={e => e.target.style.borderColor="#f97316"} onBlur={e => e.target.style.borderColor="#2d2d4e"} />
-            </div>
-            {error && (
-              <div style={{ padding: "11px 14px", background: "rgba(220,38,38,0.15)", border: "1px solid rgba(220,38,38,0.3)", color: "#f87171", borderRadius: 8, fontSize: 13 }}>
-                {error}
+              {/* Email */}
+              <div>
+                <label style={{ display: "block", marginBottom: 5, fontSize: 13, fontWeight: 600, color: "#0F172A" }}>Correo electrónico</label>
+                <input type="email" value={form.email} onChange={set("email")} placeholder="tu@email.com" required style={inputBase} onFocus={onFocus} onBlur={onBlur} />
               </div>
-            )}
-            <button type="submit" disabled={loading} style={{ marginTop: 4, padding: "14px", background: loading ? "#c2580a" : "#f97316", color: "white", border: "none", borderRadius: "10px", fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer" }}>
-              {loading ? "Creando cuenta..." : "Registrarse"}
-            </button>
-          </form>
-          <p style={{ marginTop: 20, textAlign: "center", color: "#666", fontSize: 13 }}>
-            Ya tienes cuenta?{" "}
-            <a href="/sign-in" style={{ color: "#f97316", fontWeight: 600, textDecoration: "none" }}>Iniciar sesion</a>
-          </p>
-        </div>
-      </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "linear-gradient(135deg, #1a0a2e 0%, #0d0d1a 50%, #0a1a2e 100%)", padding: "48px 56px", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: "20%", right: "15%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(249,115,22,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 400, textAlign: "center" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "rgba(249,115,22,0.15)", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 20, marginBottom: 28 }}>
-            <span>🤖</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#f97316" }}>Agente IA</span>
-          </div>
-          <h2 style={{ fontSize: 38, fontWeight: 900, color: "#fff", lineHeight: 1.15, margin: "0 0 20px" }}>
-            Convierte conversaciones en <span style={{ color: "#f97316" }}>ventas automaticamente</span>
-          </h2>
-          <p style={{ fontSize: 15, color: "#888", lineHeight: 1.6, margin: "0 0 36px" }}>
-            Unete a cientos de empresas que ya automatizan su atencion al cliente en WhatsApp con Botflow.
-          </p>
-          <div style={{ display: "flex", gap: 24, justifyContent: "center" }}>
-            {[["500+", "Empresas"], ["98%", "Satisfaccion"], ["24/7", "Disponible"]].map(([n, l]) => (
-              <div key={l} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#f97316" }}>{n}</div>
-                <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>{l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+              {/* Password */}
+              <div>
+                <label style={{ display: "block", marginBottom: 5, fontSize: 13, fontWeight: 600, color: "#0F172A" }}>Contraseña</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPw ? "text" : "password"} value={form.password} onChange={set("password")}
+                    placeholder="Mínimo 6 caracteres" required style={{ ...inputBase, paddingRight: 42 }}
+                    onFocus={onFocus} onBlur={onBlur} />
+                  <button type="button" onClick={() => setShowPw(p => !p)} style={{
+                    position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#94A3B8", padding: 0,
+                  }}>{showPw ? "🙈" : "👁"}</button>
+                </div>
+                {/* Strength hint */}
+                {form.password.length > 0 && (
+                  <div style={{ marginTop: 6, display: "flex", gap: 4 }}>
+                    {[0, 1, 2, 3].map(i => (
+                      <div key={i} style={{
+                        flex: 1, height: 3, borderRadius: 2,
+                        background: form.password.length > i * 3 ? (form.password.length >= 12 ? "#10B981" : form.password.length >= 6 ? "#F59E0B" : "#EF4444") : "#E2E8F0",
+             

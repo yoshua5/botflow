@@ -1,111 +1,111 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 
-const BLUE = "#2563EB";
-const BLUE_LIGHT = "#EFF6FF";
-const BLUE_MID = "#DBEAFE";
-const TEXT = "#0F172A";
-const MUTED = "#64748B";
-const WHITE = "#FFFFFF";
-const GREEN = "#10B981";
+const T = {
+  blue:   "#2563EB",
+  blueL:  "#EFF6FF",
+  blueM:  "#DBEAFE",
+  text:   "#0F172A",
+  muted:  "#64748B",
+  border: "#E2E8F0",
+  bg:     "#F8FAFF",
+  white:  "#FFFFFF",
+  green:  "#10B981",
+  red:    "#EF4444",
+  surf:   "#F1F5F9",
+  yellow: "#F59E0B",
+};
 
-function StatCard({ icon, label, value, sub, trend }) {
+// ── KPI Card ──────────────────────────────────────────────
+function KPICard({ icon, label, value, sub, trend, color }) {
+  const up    = trend > 0;
+  const tColor = up ? T.green : T.red;
+  const tBg    = up ? "#F0FDF4" : "#FEF2F2";
   return (
     <div style={{
-      background: WHITE,
-      borderRadius: 12,
-      padding: "20px",
-      border: "1px solid #E5E7EB",
-      transition: "all 0.3s ease",
+      background: T.white, borderRadius: 14, padding: "20px 22px",
+      border: `1px solid ${T.border}`, transition: "all 0.2s",
     }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
-        e.currentTarget.style.transform = "translateY(-2px)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = "none";
-        e.currentTarget.style.transform = "translateY(0)";
-      }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 10, background: BLUE_LIGHT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.07)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 22, background: `${color || T.blue}18`,
+        }}>
           {icon}
         </div>
-        {trend && (
-          <div style={{ fontSize: 12, fontWeight: 600, color: trend > 0 ? GREEN : "#EF4444", background: trend > 0 ? "#F0FDF4" : "#FEF2F2", padding: "4px 8px", borderRadius: 6 }}>
-            {trend > 0 ? "+" : ""}{trend}%
-          </div>
+        {trend !== undefined && (
+          <span style={{ fontSize: 12, fontWeight: 700, color: tColor, background: tBg, padding: "3px 8px", borderRadius: 6 }}>
+            {up ? "+" : ""}{trend}%
+          </span>
         )}
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ fontSize: 32, fontWeight: 900, color: TEXT, letterSpacing: "-0.02em" }}>
+      <div style={{ fontSize: 30, fontWeight: 900, color: T.text, letterSpacing: "-0.03em", lineHeight: 1.1 }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: 13, color: MUTED, marginTop: 6 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 12, color: T.muted, marginTop: 5 }}>{sub}</div>}
     </div>
   );
 }
 
+// ── Bot Status Card ───────────────────────────────────────
 function BotCard({ bot }) {
+  const active = bot.status === "ACTIVO";
   return (
     <Link href={`/dashboard/bots/${bot.id}`} style={{ textDecoration: "none" }}>
       <div style={{
-        background: WHITE,
-        borderRadius: 12,
-        padding: "20px",
-        border: "1px solid #E5E7EB",
-        cursor: "pointer",
-        transition: "all 0.3s ease",
+        background: T.white, borderRadius: 14, padding: "18px 20px",
+        border: `1px solid ${T.border}`, cursor: "pointer", transition: "all 0.2s",
       }}
-        onMouseEnter={e => {
-          e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
-          e.currentTarget.style.transform = "translateY(-2px)";
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.boxShadow = "none";
-          e.currentTarget.style.transform = "translateY(0)";
-        }}>
-        {/* Header with Badge */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 4 }}>
-              {bot.agentName || bot.name}
+        onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.07)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+        onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Health dot */}
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10, background: active ? "#F0FDF4" : "#FEF2F2",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
+              }}>🤖</div>
+              <div style={{
+                position: "absolute", bottom: 0, right: 0,
+                width: 10, height: 10, borderRadius: "50%",
+                background: active ? T.green : T.red,
+                border: "2px solid white",
+              }} />
             </div>
-            <div style={{ fontSize: 13, color: MUTED }}>
-              {bot.businessName || "Mi negocio"}
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, lineHeight: 1.2 }}>
+                {bot.agentName || bot.name}
+              </div>
+              <div style={{ fontSize: 12, color: T.muted, marginTop: 1 }}>
+                {bot.businessName || "Mi negocio"}
+              </div>
             </div>
           </div>
-
-          {/* Status Badge */}
-          <div style={{
-            fontSize: 11,
-            fontWeight: 700,
-            padding: "4px 10px",
-            borderRadius: 6,
-            background: bot.status === "ACTIVO" ? "#F0FDF4" : "#FEF2F2",
-            color: bot.status === "ACTIVO" ? GREEN : "#EF4444",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
+          <span style={{
+            fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em",
+            padding: "3px 8px", borderRadius: 6,
+            background: active ? "#F0FDF4" : "#FEF2F2",
+            color: active ? T.green : T.red,
           }}>
-            {bot.status === "ACTIVO" ? "Activo" : "Inactivo"}
-          </div>
+            {active ? "Activo" : "Inactivo"}
+          </span>
         </div>
-
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 12, borderTop: `1px solid ${T.surf}` }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
-              {(bot.messageCount || 0).toLocaleString()}
-            </div>
-            <div style={{ fontSize: 11, color: MUTED }}>Mensajes</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{(bot.messageCount || 0).toLocaleString()}</div>
+            <div style={{ fontSize: 11, color: T.muted }}>Mensajes</div>
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
-              {(bot.conversationCount || 0).toLocaleString()}
-            </div>
-            <div style={{ fontSize: 11, color: MUTED }}>Conversaciones</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{(bot.conversationCount || 0).toLocaleString()}</div>
+            <div style={{ fontSize: 11, color: T.muted }}>Conversaciones</div>
           </div>
         </div>
       </div>
@@ -113,141 +113,76 @@ function BotCard({ bot }) {
   );
 }
 
-export default function DashboardPage() {
-  const [bots, setBots] = useState([]);
-  const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/bots").then(r => r.json()),
-      fetch("/api/analytics").then(r => r.json()),
-    ]).then(([botsData, analyticsData]) => {
-      setBots(botsData.bots || []);
-      setAnalytics(analyticsData);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
-
-  const activeCount = bots.filter(b => b.status === "ACTIVO").length;
-  const connectedCount = bots.filter(b => b.phoneNumberId).length;
-  const totalMessages = analytics?.totalMessages || 0;
-  const totalConversations = analytics?.totalConversations || 0;
-
+// ── Quick Action Button ───────────────────────────────────
+function QuickAction({ icon, label, href, color }) {
   return (
-    <div style={{ padding: "40px 0" }}>
-      {/* Hero Section */}
+    <Link href={href} style={{ textDecoration: "none" }}>
       <div style={{
-        background: `linear-gradient(135deg, ${BLUE} 0%, #1E40AF 100%)`,
-        borderRadius: 16,
-        padding: "48px 40px",
-        color: WHITE,
-        marginBottom: 48,
-      }}>
-        <div style={{ maxWidth: 600 }}>
-          <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 12, letterSpacing: "-0.02em" }}>
-            Bienvenido a Botflow
-          </h1>
-          <p style={{ fontSize: 16, color: "rgba(255,255,255,0.9)", marginBottom: 28, lineHeight: 1.6 }}>
-            Gestiona todos tus bots de WhatsApp en un solo lugar. Crea, configura y monitorea agentes de IA en minutos.
-          </p>
-          <Link href="/dashboard/create-improved">
-            <button style={{
-              padding: "12px 28px",
-              background: WHITE,
-              color: BLUE,
-              border: "none",
-              borderRadius: 8,
-              fontSize: 15,
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = "scale(1.05)";
-                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.2)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.boxShadow = "none";
-              }}>
-              <span>+</span> Crear nuevo bot
-            </button>
-          </Link>
-        </div>
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
+        padding: "14px 10px", borderRadius: 12, background: T.white,
+        border: `1px solid ${T.border}`, cursor: "pointer", transition: "all 0.18s", minWidth: 80,
+      }}
+        onMouseEnter={e => { e.currentTarget.style.background = T.blueL; e.currentTarget.style.borderColor = "#93C5FD"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = T.white; e.currentTarget.style.borderColor = T.border; e.currentTarget.style.transform = "translateY(0)"; }}>
+        <span style={{ fontSize: 22 }}>{icon}</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: T.text, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
       </div>
+    </Link>
+  );
+}
 
-      {/* Stats Grid */}
-      <div style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: TEXT, marginBottom: 20 }}>
-          Tu actividad
-        </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-          <StatCard icon="🤖" label="Bots Activos" value={activeCount} sub={`de ${bots.length} total`} />
-          <StatCard icon="💬" label="Mensajes" value={totalMessages.toLocaleString()} sub="Todos los tiempos" />
-          <StatCard icon="👥" label="Conversaciones" value={totalConversations.toLocaleString()} sub="Únicas" />
-          <StatCard icon="📱" label="Conectados" value={connectedCount} sub="100% de cobertura" />
-        </div>
-      </div>
-
-      {/* Bots Section */}
-      <div>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: TEXT, marginBottom: 20 }}>
-          Tus bots
-        </h2>
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: MUTED }}>
-            Cargando bots...
-          </div>
-        ) : bots.length === 0 ? (
-          <div style={{
-            background: BLUE_LIGHT,
-            borderRadius: 12,
-            padding: "40px 20px",
-            textAlign: "center",
-            border: `2px dashed ${BLUE}`,
-          }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 12 }}>
-              No tienes bots creados aún
-            </div>
-            <div style={{ fontSize: 14, color: MUTED, marginBottom: 20 }}>
-              Crea tu primer bot para comenzar a gestionar tus agentes de WhatsApp
-            </div>
-            <Link href="/dashboard/create-improved">
-              <button style={{
-                padding: "10px 24px",
-                background: BLUE,
-                color: WHITE,
-                border: "none",
-                borderRadius: 8,
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-              }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.opacity = "0.9";
-                  e.currentTarget.style.transform = "scale(1.05)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.opacity = "1";
-                  e.currentTarget.style.transform = "scale(1)";
-                }}>
-                + Crear Bot
-              </button>
-            </Link>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
-            {bots.map(bot => (
-              <BotCard key={bot.id} bot={bot} />
-            ))}
-          </div>
-        )}
+// ── Activity Item ─────────────────────────────────────────
+function ActivityItem({ icon, text, time, color }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${T.surf}` }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 8, background: `${color || T.blue}18`,
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0,
+      }}>{icon}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>{text}</div>
+        <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>{time}</div>
       </div>
     </div>
   );
 }
+
+// ── Onboarding Checklist ──────────────────────────────────
+function OnboardingChecklist({ hasBots }) {
+  const steps = [
+    { done: true,    icon: "✅", label: "Creaste tu cuenta", href: null },
+    { done: hasBots, icon: "🤖", label: "Crea tu primer bot", href: "/dashboard/create" },
+    { done: false,   icon: "📱", label: "Conecta WhatsApp",   href: "/dashboard/configuracion/conexiones" },
+    { done: false,   icon: "💬", label: "Envía tu primer mensaje", href: null },
+  ];
+  const completed = steps.filter(s => s.done).length;
+  const pct = Math.round((completed / steps.length) * 100);
+  return (
+    <div style={{ background: T.white, borderRadius: 14, padding: "22px 24px", border: `1px solid ${T.border}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>Primeros pasos</div>
+          <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{completed} de {steps.length} completados</div>
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: T.blue }}>{pct}%</div>
+      </div>
+      {/* Progress bar */}
+      <div style={{ height: 6, background: T.surf, borderRadius: 6, marginBottom: 18, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: T.blue, borderRadius: 6, transition: "width 0.5s ease" }} />
+      </div>
+      {steps.map((s, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+            background: s.done ? T.green : T.surf,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, color: s.done ? T.white : T.muted, fontWeight: 700,
+          }}>
+            {s.done ? "✓" : i + 1}
+          </div>
+          {s.href && !s.done ? (
+            <Link href={s.href} style={{ fontSize: 13, color: T.blue, fontWeight: 600, textDecoration: "none" }}>
+              {s.label} →
+            </Link>
+          ) : (
+            <span style={{ fontSize: 13, color: s.done ? T.muted : T.text, fontWeight: s.done ? 

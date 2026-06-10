@@ -1,12 +1,37 @@
 "use client";
 import { useState, useEffect } from "react";
 
-const BLUE = "#2563EB";
-const BLUE_LIGHT = "#EFF6FF";
-const BLUE_MID = "#DBEAFE";
-const TEXT = "#0F172A";
-const MUTED = "#64748B";
-const WHITE = "#FFFFFF";
+const T = {
+  blue:   "#2563EB",
+  blueL:  "#EFF6FF",
+  blueM:  "#DBEAFE",
+  text:   "#0F172A",
+  muted:  "#64748B",
+  white:  "#FFFFFF",
+  border: "#E2E8F0",
+  surf:   "#F8FAFF",
+};
+
+function AgentLogo({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="36" height="36" rx="10" fill="#0F172A"/>
+      <path d="M18 6L26 26H10L18 6Z" fill="url(#lg1)" opacity="0.95"/>
+      <ellipse cx="15" cy="23" rx="5" ry="4" fill="none" stroke="#22D3EE" strokeWidth="1.8"/>
+      <circle cx="13.5" cy="23" r="0.8" fill="#22D3EE"/>
+      <circle cx="15.5" cy="23" r="0.8" fill="#22D3EE"/>
+      <line x1="22" y1="18" x2="27" y2="18" stroke="#22D3EE" strokeWidth="1.6" strokeLinecap="round"/>
+      <line x1="22" y1="21" x2="26" y2="21" stroke="#3B82F6" strokeWidth="1.4" strokeLinecap="round"/>
+      <line x1="22" y1="24" x2="25" y2="24" stroke="#60A5FA" strokeWidth="1.2" strokeLinecap="round"/>
+      <defs>
+        <linearGradient id="lg1" x1="18" y1="6" x2="18" y2="26" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFFFFF"/>
+          <stop offset="1" stopColor="#93C5FD"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
 
 // ── Navbar ────────────────────────────────────────────────
 function Navbar() {
@@ -20,33 +45,35 @@ function Navbar() {
     <nav style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
       background: scrolled ? "rgba(255,255,255,0.95)" : "transparent",
-      backdropFilter: scrolled ? "blur(12px)" : "none",
-      borderBottom: scrolled ? "1px solid #E2E8F0" : "none",
+      backdropFilter: scrolled ? "blur(14px)" : "none",
+      borderBottom: scrolled ? `1px solid ${T.border}` : "none",
       transition: "all 0.3s",
     }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: BLUE, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>💬</div>
-          <span style={{ fontSize: 18, fontWeight: 800, color: TEXT, letterSpacing: "-0.02em" }}>Bot<span style={{ color: BLUE }}>flow</span></span>
+        <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 9 }}>
+          <AgentLogo size={34} />
+          <span style={{ fontSize: 18, fontWeight: 900, color: T.text, letterSpacing: "-0.03em" }}>
+            Agent<span style={{ color: T.blue }}>Flow</span>
+          </span>
         </a>
-        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-          {["Cómo funciona", "Beneficios", "Precios"].map(item => (
-            <a key={item} href="#" style={{ fontSize: 14, fontWeight: 500, color: MUTED, textDecoration: "none", transition: "color 0.2s" }}
-              onMouseEnter={e => e.target.style.color = TEXT}
-              onMouseLeave={e => e.target.style.color = MUTED}>{item}</a>
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          {[["Cómo funciona","#como-funciona"], ["Funciones","#funciones"], ["Precios","#precios"]].map(([label, href]) => (
+            <a key={label} href={href} style={{ fontSize: 14, fontWeight: 500, color: T.muted, textDecoration: "none", transition: "color 0.2s" }}
+              onMouseEnter={e => e.target.style.color = T.text}
+              onMouseLeave={e => e.target.style.color = T.muted}>{label}</a>
           ))}
-          <a href="/sign-in" style={{ fontSize: 14, fontWeight: 500, color: MUTED, textDecoration: "none", transition: "color 0.2s" }}
-            onMouseEnter={e => e.target.style.color = TEXT}
-            onMouseLeave={e => e.target.style.color = MUTED}>
+          <a href="/sign-in" style={{ fontSize: 14, fontWeight: 500, color: T.muted, textDecoration: "none", transition: "color 0.2s" }}
+            onMouseEnter={e => e.target.style.color = T.text}
+            onMouseLeave={e => e.target.style.color = T.muted}>
             Iniciar sesión
           </a>
           <a href="/sign-up" style={{
-            padding: "8px 20px", background: BLUE, borderRadius: 8, fontSize: 14, fontWeight: 600,
-            color: WHITE, textDecoration: "none", boxShadow: "0 1px 3px rgba(37,99,235,0.3)",
+            padding: "9px 22px", background: T.blue, borderRadius: 9, fontSize: 14, fontWeight: 700,
+            color: T.white, textDecoration: "none", boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
             transition: "all 0.2s",
           }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(37,99,235,0.4)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = BLUE; e.currentTarget.style.boxShadow = "0 1px 3px rgba(37,99,235,0.3)"; }}>
+            onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; e.currentTarget.style.boxShadow = "0 4px 14px rgba(37,99,235,0.45)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = T.blue; e.currentTarget.style.boxShadow = "0 2px 8px rgba(37,99,235,0.3)"; }}>
             Empieza Gratis
           </a>
         </div>
@@ -57,10 +84,10 @@ function Navbar() {
 
 // ── Hero Chat Mockup ──────────────────────────────────────
 const CHAT_MSGS = [
-  { from: "user", text: "Hola! Estoy interesado en un departamento en Madrid." },
-  { from: "bot", text: "¡Perfecto! Tengo 3 opciones ideales. ¿Buscas con terraza?" },
-  { from: "user", text: "Sí, con terraza y cerca del metro." },
-  { from: "bot", text: "Encontré 2 opciones perfectas. ¿Te agendo una visita hoy?" },
+  { from: "user", text: "Hola! Me interesa agendar una cita." },
+  { from: "bot",  text: "¡Con gusto! ¿Para cuál servicio?" },
+  { from: "user", text: "Consultoría de negocios." },
+  { from: "bot",  text: "Perfecto. Tengo disponibilidad mañana a las 10am y 3pm. ¿Cuál te funciona? 📅" },
 ];
 
 function ChatMockup() {
@@ -70,11 +97,11 @@ function ChatMockup() {
     return () => clearInterval(t);
   }, []);
   return (
-    <div style={{ background: WHITE, borderRadius: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.12)", overflow: "hidden", width: "100%", maxWidth: 360 }}>
+    <div style={{ background: T.white, borderRadius: 22, boxShadow: "0 24px 64px rgba(0,0,0,0.12)", overflow: "hidden", width: "100%", maxWidth: 360 }}>
       <div style={{ background: "#128C7E", padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: WHITE }}>Bot Inmobiliario Pro</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.white }}>AgentFlow Bot</div>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#4ADE80" }} />
             <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)" }}>En línea 24/7</span>
@@ -87,9 +114,9 @@ function ChatMockup() {
             <div style={{
               maxWidth: "80%", padding: "8px 12px",
               borderRadius: msg.from === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-              background: msg.from === "user" ? "#DCF8C6" : WHITE,
-              fontSize: 13, color: TEXT, lineHeight: 1.5,
-              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+              background: msg.from === "user" ? "#DCF8C6" : T.white,
+              fontSize: 13, color: T.text, lineHeight: 1.5,
+              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
             }}>{msg.text}</div>
           </div>
         ))}
@@ -101,39 +128,36 @@ function ChatMockup() {
 // ── Hero ──────────────────────────────────────────────────
 function Hero({ data }) {
   return (
-    <section style={{
-      background: "linear-gradient(160deg, #EFF6FF 0%, #F8FAFF 55%, #F0FDF4 100%)",
-      paddingTop: 120, paddingBottom: 80,
-    }}>
+    <section style={{ background: "linear-gradient(160deg, #EFF6FF 0%, #F8FAFF 55%, #F0FDF4 100%)", paddingTop: 120, paddingBottom: 80 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
         <div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 100, background: BLUE_MID, border: `1px solid #93C5FD`, marginBottom: 24 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 100, background: T.blueM, border: `1px solid #93C5FD`, marginBottom: 24 }}>
             <span style={{ fontSize: 12 }}>✨</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: BLUE, letterSpacing: "0.05em", textTransform: "uppercase" }}>Nueva Era de Automatización</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: T.blue, letterSpacing: "0.05em", textTransform: "uppercase" }}>Agentes IA de nueva generación</span>
           </div>
-          <h1 style={{ fontSize: "clamp(32px,4vw,54px)", fontWeight: 900, color: TEXT, letterSpacing: "-0.03em", lineHeight: 1.1, marginBottom: 20 }}>
-            {data?.heroTitle || "Crea tu Bot de WhatsApp con el poder de la IA"}
+          <h1 style={{ fontSize: "clamp(32px,4vw,54px)", fontWeight: 900, color: T.text, letterSpacing: "-0.03em", lineHeight: 1.1, marginBottom: 20 }}>
+            {data?.heroTitle || "Automatiza tu negocio con Agentes de IA"}
           </h1>
-          <p style={{ fontSize: 17, color: MUTED, lineHeight: 1.7, marginBottom: 36, maxWidth: 460 }}>
-            {data?.heroDesc || "Solo describe tu idea y nuestra IA se encarga del resto. Sin código, sin complicaciones, y listo en minutos para atender a tus clientes."}
+          <p style={{ fontSize: 17, color: T.muted, lineHeight: 1.7, marginBottom: 36, maxWidth: 460 }}>
+            {data?.heroDesc || "Crea agentes inteligentes en minutos que atienden, agendan y venden por ti en WhatsApp, Instagram y web. Sin código, disponibles 24/7."}
           </p>
           <div style={{ display: "flex", gap: 12, marginBottom: 36, flexWrap: "wrap" }}>
             <a href="/sign-up" style={{
-              padding: "13px 28px", background: BLUE, borderRadius: 10, fontSize: 15, fontWeight: 700,
-              color: WHITE, textDecoration: "none", boxShadow: "0 4px 16px rgba(37,99,235,0.35)", transition: "all 0.2s",
+              padding: "13px 28px", background: T.blue, borderRadius: 10, fontSize: 15, fontWeight: 700,
+              color: T.white, textDecoration: "none", boxShadow: "0 4px 16px rgba(37,99,235,0.35)", transition: "all 0.2s",
             }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = BLUE; e.currentTarget.style.transform = "none"; }}>
+              onMouseEnter={e => { e.currentTarget.style.background = "#1D4ED8"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(37,99,235,0.45)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = T.blue; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(37,99,235,0.35)"; }}>
               Empieza Gratis
             </a>
             <a href="#como-funciona" style={{
-              padding: "13px 24px", background: WHITE, borderRadius: 10, fontSize: 15, fontWeight: 600,
-              color: TEXT, textDecoration: "none", border: "1.5px solid #E2E8F0",
+              padding: "13px 24px", background: T.white, borderRadius: 10, fontSize: 15, fontWeight: 600,
+              color: T.text, textDecoration: "none", border: `1.5px solid ${T.border}`,
               display: "flex", alignItems: "center", gap: 8, transition: "all 0.2s",
             }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#94A3B8"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E2E8F0"; }}>
-              <span style={{ width: 22, height: 22, borderRadius: "50%", background: BLUE_MID, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: BLUE }}>▶</span>
+              onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; }}>
+              <span style={{ width: 22, height: 22, borderRadius: "50%", background: T.blueM, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: T.blue }}>▶</span>
               Ver demo
             </a>
           </div>
@@ -145,19 +169,19 @@ function Hero({ data }) {
                 </div>
               ))}
             </div>
-            <span style={{ fontSize: 13, color: MUTED }}><strong style={{ color: TEXT }}>+2,000 bots</strong> creados este mes</span>
+            <span style={{ fontSize: 13, color: T.muted }}><strong style={{ color: T.text }}>+500 empresas</strong> ya usan AgentFlow</span>
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 16 }}>
           <ChatMockup />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, width: "100%", maxWidth: 360 }}>
-            <div style={{ background: WHITE, borderRadius: 14, padding: "16px 18px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #F1F5F9" }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: "-0.02em" }}>98%</div>
-              <div style={{ fontSize: 12, color: MUTED, fontWeight: 500, marginTop: 2 }}>Precisión en respuestas</div>
+            <div style={{ background: T.white, borderRadius: 14, padding: "16px 18px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: `1px solid ${T.border}` }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: T.text, letterSpacing: "-0.02em" }}>98%</div>
+              <div style={{ fontSize: 12, color: T.muted, fontWeight: 500, marginTop: 2 }}>Precisión en respuestas</div>
             </div>
-            <div style={{ background: BLUE, borderRadius: 14, padding: "16px 18px", boxShadow: "0 4px 16px rgba(37,99,235,0.3)" }}>
+            <div style={{ background: T.blue, borderRadius: 14, padding: "16px 18px", boxShadow: "0 4px 16px rgba(37,99,235,0.3)" }}>
               <div style={{ fontSize: 24, marginBottom: 4 }}>⚡</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: WHITE }}>Listo en &lt; 5 min</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.white }}>Listo en &lt; 5 min</div>
             </div>
           </div>
         </div>
@@ -167,29 +191,53 @@ function Hero({ data }) {
   );
 }
 
+// ── Social Proof Bar ──────────────────────────────────────
+function SocialProof() {
+  const stats = [
+    { n: "500+", label: "Empresas activas" },
+    { n: "2M+",  label: "Mensajes procesados" },
+    { n: "98%",  label: "Satisfacción clientes" },
+    { n: "24/7", label: "Disponibilidad" },
+    { n: "<5min", label: "Tiempo de setup" },
+  ];
+  return (
+    <section style={{ background: T.text, padding: "24px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "center", gap: 60, flexWrap: "wrap" }}>
+        {stats.map((s, i) => (
+          <div key={i} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#60A5FA", letterSpacing: "-0.02em" }}>{s.n}</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ── Cómo Funciona ─────────────────────────────────────────
 function HowItWorks() {
   const steps = [
-    { icon: "✏️", num: "1", title: "Describe tu idea", desc: "Escribe qué quieres que haga tu bot: vender, agendar citas o soporte técnico." },
-    { icon: "💬", num: "2", title: "La IA te pregunta", desc: "Nuestra IA te hará un par de preguntas para pulir los detalles y el tono del bot." },
-    { icon: "🚀", num: "3", title: "¡Listo para usar!", desc: "Conectamos tu bot a WhatsApp y empieza a recibir mensajes de inmediato." },
+    { icon: "✏️", num: "1", title: "Describe tu idea", desc: "Escribe qué quieres que haga tu agente: vender, agendar citas o soporte técnico." },
+    { icon: "💬", num: "2", title: "La IA te configura", desc: "AgentFlow te hará preguntas precisas para pulir el tono y la personalidad del agente." },
+    { icon: "🚀", num: "3", title: "¡Listo para usar!", desc: "Conecta a WhatsApp en 1 clic y empieza a recibir mensajes de inmediato." },
   ];
   return (
-    <section id="como-funciona" style={{ background: WHITE, padding: "80px 24px" }}>
+    <section id="como-funciona" style={{ background: T.white, padding: "80px 24px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 52 }}>
-          <h2 style={{ fontSize: "clamp(26px,3vw,40px)", fontWeight: 900, color: TEXT, letterSpacing: "-0.02em", marginBottom: 12 }}>Cómo funciona</h2>
-          <p style={{ fontSize: 16, color: MUTED, maxWidth: 480, margin: "0 auto" }}>Nuestro proceso de creación es tan natural como hablar con un asistente humano.</p>
+          <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: T.blue, letterSpacing: "0.08em", textTransform: "uppercase", background: T.blueL, padding: "4px 14px", borderRadius: 100, marginBottom: 14 }}>Proceso simple</div>
+          <h2 style={{ fontSize: "clamp(26px,3vw,40px)", fontWeight: 900, color: T.text, letterSpacing: "-0.02em", marginBottom: 12 }}>Cómo funciona AgentFlow</h2>
+          <p style={{ fontSize: 16, color: T.muted, maxWidth: 480, margin: "0 auto" }}>Nuestro proceso de creación es tan natural como hablar con un asistente.</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 28 }}>
           {steps.map((s, i) => (
-            <div key={i} style={{ textAlign: "center", padding: "36px 24px", background: "#FAFBFF", borderRadius: 20, border: "1px solid #EEF2FF", transition: "all 0.25s", cursor: "default" }}
+            <div key={i} style={{ textAlign: "center", padding: "36px 24px", background: "#FAFBFF", borderRadius: 20, border: `1px solid ${T.border}`, transition: "all 0.25s", cursor: "default" }}
               onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 32px rgba(37,99,235,0.1)"; e.currentTarget.style.transform = "translateY(-4px)"; }}
               onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: BLUE_MID, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, margin: "0 auto 20px" }}>{s.icon}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: BLUE, letterSpacing: "0.08em", marginBottom: 8, textTransform: "uppercase" }}>{s.num}.</div>
-              <h3 style={{ fontSize: 18, fontWeight: 800, color: TEXT, marginBottom: 10 }}>{s.title}</h3>
-              <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>{s.desc}</p>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: T.blueM, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, margin: "0 auto 20px" }}>{s.icon}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.blue, letterSpacing: "0.08em", marginBottom: 8, textTransform: "uppercase" }}>{s.num}.</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 10 }}>{s.title}</h3>
+              <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.65 }}>{s.desc}</p>
             </div>
           ))}
         </div>
@@ -198,58 +246,80 @@ function HowItWorks() {
   );
 }
 
-// ── Benefits ──────────────────────────────────────────────
-function Benefits() {
-  const items = [
-    { icon: "⏱️", title: "Ahorro de tiempo masivo", desc: "Automatiza tareas repetitivas y deja que tu equipo se enfoque en cerrar ventas complejas." },
-    { icon: "💬", title: "Respuesta inmediata 24/7", desc: "No pierdas un solo lead por falta de atención. Tus clientes recibirán respuestas en segundos." },
-    { icon: "🔗", title: "Fácil integración", desc: "Conéctate con tu CRM, Google Sheets o cualquier herramienta que ya uses de forma nativa." },
+// ── Features Grid ─────────────────────────────────────────
+function Features() {
+  const feats = [
+    { icon: "🤖", title: "Agentes con IA",          desc: "GPT-4 detrás de cada agente. Aprende de tu negocio y mejora con el tiempo." },
+    { icon: "📱", title: "WhatsApp nativo",          desc: "API oficial de Meta. Sin riesgos de baneo, cumplimiento total de políticas." },
+    { icon: "📅", title: "Gestión de citas",         desc: "Tu agente agenda, confirma y recuerda citas automáticamente." },
+    { icon: "🗂️", title: "Base de conocimiento",     desc: "Sube PDFs, URLs o texto y tu agente aprende a responder con precisión." },
+    { icon: "📊", title: "Analytics en tiempo real", desc: "Mide conversaciones, tiempo de respuesta y tasa de conversión." },
+    { icon: "🔌", title: "Integraciones fáciles",    desc: "Conecta con CRM, Google Sheets, Calendly y más sin código." },
   ];
   return (
-    <section style={{ background: "#F8FAFF", padding: "80px 24px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 72, alignItems: "center" }}>
-        <div style={{ position: "relative" }}>
-          <div style={{
-            borderRadius: 24, overflow: "hidden", aspectRatio: "4/3",
-            background: "linear-gradient(135deg, #0F172A 0%, #1e3a5f 50%, #0C1A3A 100%)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 32px 80px rgba(0,0,0,0.2)",
-          }}>
-            <div style={{ textAlign: "center", padding: 24 }}>
-              <div style={{ fontSize: 56, marginBottom: 20 }}>🤖</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
-                {["📊","📈","💡","🔄","⚡","🎯"].map((e,i) => (
-                  <div key={i} style={{ width: 44, height: 44, background: "rgba(37,99,235,0.25)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, border: "1px solid rgba(37,99,235,0.3)" }}>{e}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div style={{
-            position: "absolute", bottom: -20, left: -20,
-            background: BLUE, borderRadius: 16, padding: "18px 22px", maxWidth: 260,
-            boxShadow: "0 12px 40px rgba(37,99,235,0.4)",
-          }}>
-            <p style={{ fontSize: 13, color: WHITE, fontWeight: 600, lineHeight: 1.6, marginBottom: 8 }}>
-              "Botflow redujo nuestro tiempo de respuesta en un 90%"
-            </p>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>— Carlos R., CEO de InmoQuick</span>
-          </div>
+    <section id="funciones" style={{ background: T.surf, padding: "80px 24px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 52 }}>
+          <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: T.blue, letterSpacing: "0.08em", textTransform: "uppercase", background: T.blueL, padding: "4px 14px", borderRadius: 100, marginBottom: 14 }}>Todo incluido</div>
+          <h2 style={{ fontSize: "clamp(26px,3vw,40px)", fontWeight: 900, color: T.text, letterSpacing: "-0.02em", marginBottom: 12 }}>Funciones que marcan la diferencia</h2>
+          <p style={{ fontSize: 16, color: T.muted, maxWidth: 480, margin: "0 auto" }}>Cada herramienta diseñada para hacer crecer tu negocio en piloto automático.</p>
         </div>
-        <div>
-          <h2 style={{ fontSize: "clamp(26px,3vw,40px)", fontWeight: 900, color: TEXT, letterSpacing: "-0.02em", lineHeight: 1.15, marginBottom: 36 }}>
-            Diseñado para que tu<br />negocio nunca duerma
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-            {items.map((item, i) => (
-              <div key={i} style={{ display: "flex", gap: 16 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: BLUE_MID, border: `1px solid #93C5FD44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{item.icon}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
+          {feats.map((f, i) => (
+            <div key={i} style={{
+              background: T.white, borderRadius: 16, padding: "28px 24px",
+              border: `1px solid ${T.border}`, transition: "all 0.22s", cursor: "default",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 28px rgba(37,99,235,0.1)"; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "#93C5FD"; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = T.border; }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: T.blueL, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16 }}>
+                {f.icon}
+              </div>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 8 }}>{f.title}</h3>
+              <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.65, margin: 0 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Testimonials ──────────────────────────────────────────
+function Testimonials() {
+  const testimonials = [
+    { name: "Carlos Rodríguez", role: "CEO · InmoQuick",   text: "AgentFlow redujo nuestro tiempo de respuesta en un 90%. Ahora atendemos 3x más leads sin contratar más personal.",          avatar: "👨‍💼" },
+    { name: "Sofía García",      role: "Directora · MedApp", text: "El bot agenda citas sólo. Nuestros pacientes aman la rapidez y disponibilidad 24/7. Increíble herramienta.",                  avatar: "👩‍⚕️" },
+    { name: "Marcos Jiménez",    role: "Fundador · ShopBot", text: "Pasamos de perder ventas por falta de atención a cerrar el 40% más de pedidos en el primer mes con AgentFlow.",               avatar: "👨‍💻" },
+  ];
+  return (
+    <section style={{ background: T.white, padding: "80px 24px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 52 }}>
+          <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: T.blue, letterSpacing: "0.08em", textTransform: "uppercase", background: T.blueL, padding: "4px 14px", borderRadius: 100, marginBottom: 14 }}>Testimonios</div>
+          <h2 style={{ fontSize: "clamp(26px,3vw,40px)", fontWeight: 900, color: T.text, letterSpacing: "-0.02em", marginBottom: 12 }}>Lo que dicen nuestros clientes</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
+          {testimonials.map((t, i) => (
+            <div key={i} style={{
+              background: "#FAFBFF", borderRadius: 16, padding: "28px 24px",
+              border: `1px solid ${T.border}`, transition: "all 0.22s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 28px rgba(37,99,235,0.08)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
+              <div style={{ display: "flex", gap: 2, marginBottom: 16 }}>
+                {"★★★★★".split("").map((s, j) => <span key={j} style={{ color: "#F59E0B", fontSize: 15 }}>{s}</span>)}
+              </div>
+              <p style={{ fontSize: 14, color: T.text, lineHeight: 1.7, marginBottom: 20, fontStyle: "italic" }}>"{t.text}"</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: T.blueL, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{t.avatar}</div>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 4 }}>{item.title}</div>
-                  <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>{item.desc}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: T.muted }}>{t.role}</div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -259,48 +329,49 @@ function Benefits() {
 // ── Pricing ───────────────────────────────────────────────
 function Pricing({ data }) {
   const plans = [
-    { name: data?.plan1Name || "Starter",  price: data?.plan1Price || "Gratis", desc: data?.plan1Desc || "Para probar y lanzar tu primer bot",   features: data?.plan1Features || ["1 bot activo","500 mensajes/mes","Soporte por email","Plantillas básicas"],                                          cta: "Empezar gratis",   highlight: false },
-    { name: data?.plan2Name || "Pro",      price: data?.plan2Price || "$29",    period: "/mes", desc: data?.plan2Desc || "Para negocios en crecimiento",    features: data?.plan2Features || ["5 bots activos","10,000 mensajes/mes","Soporte prioritario","Analíticas avanzadas","Integraciones CRM"], cta: "Elegir Pro",       highlight: true  },
-    { name: data?.plan3Name || "Business", price: data?.plan3Price || "$79",    period: "/mes", desc: data?.plan3Desc || "Para equipos y agencias",          features: data?.plan3Features || ["Bots ilimitados","Mensajes ilimitados","Soporte dedicado","API personalizada","White label"],              cta: "Contactar ventas", highlight: false },
+    { name: data?.plan1Name || "Starter",  price: data?.plan1Price || "Gratis", desc: data?.plan1Desc || "Para probar y lanzar tu primer agente",   features: data?.plan1Features || ["1 agente activo","500 mensajes/mes","Soporte por email","Plantillas básicas"],                                             cta: "Empezar gratis",   highlight: false },
+    { name: data?.plan2Name || "Pro",      price: data?.plan2Price || "$29",    period: "/mes", desc: data?.plan2Desc || "Para negocios en crecimiento",    features: data?.plan2Features || ["5 agentes activos","10,000 mensajes/mes","Soporte prioritario","Analíticas avanzadas","Integraciones CRM"],      cta: "Elegir Pro",       highlight: true  },
+    { name: data?.plan3Name || "Business", price: data?.plan3Price || "$79",    period: "/mes", desc: data?.plan3Desc || "Para equipos y agencias",          features: data?.plan3Features || ["Agentes ilimitados","Mensajes ilimitados","Soporte dedicado","API personalizada","White label"],                  cta: "Contactar ventas", highlight: false },
   ];
   return (
-    <section id="precios" style={{ background: WHITE, padding: "80px 24px" }}>
+    <section id="precios" style={{ background: T.surf, padding: "80px 24px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 52 }}>
-          <h2 style={{ fontSize: "clamp(26px,3vw,40px)", fontWeight: 900, color: TEXT, letterSpacing: "-0.02em", marginBottom: 12 }}>Precios simples y transparentes</h2>
-          <p style={{ fontSize: 16, color: MUTED }}>Sin tarifas ocultas. Cancela cuando quieras.</p>
+          <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: T.blue, letterSpacing: "0.08em", textTransform: "uppercase", background: T.blueL, padding: "4px 14px", borderRadius: 100, marginBottom: 14 }}>Precios</div>
+          <h2 style={{ fontSize: "clamp(26px,3vw,40px)", fontWeight: 900, color: T.text, letterSpacing: "-0.02em", marginBottom: 12 }}>Simples y transparentes</h2>
+          <p style={{ fontSize: 16, color: T.muted }}>Sin tarifas ocultas. Cancela cuando quieras.</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24, alignItems: "start" }}>
           {plans.map((plan, i) => (
             <div key={i} style={{
               borderRadius: 20, padding: "32px 28px",
-              background: plan.highlight ? BLUE : WHITE,
-              border: plan.highlight ? "none" : "1.5px solid #E2E8F0",
+              background: plan.highlight ? T.blue : T.white,
+              border: plan.highlight ? "none" : `1.5px solid ${T.border}`,
               boxShadow: plan.highlight ? "0 20px 60px rgba(37,99,235,0.3)" : "0 2px 12px rgba(0,0,0,0.04)",
               transform: plan.highlight ? "scale(1.03)" : "none",
               position: "relative", overflow: "hidden", transition: "all 0.25s",
             }}
               onMouseEnter={e => { if (!plan.highlight) { e.currentTarget.style.boxShadow = "0 8px 32px rgba(37,99,235,0.12)"; e.currentTarget.style.transform = "translateY(-4px)"; } }}
               onMouseLeave={e => { if (!plan.highlight) { e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "none"; } }}>
-              {plan.highlight && <div style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.2)", borderRadius: 100, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: WHITE }}>MÁS POPULAR</div>}
-              <div style={{ fontSize: 13, fontWeight: 700, color: plan.highlight ? "rgba(255,255,255,0.75)" : MUTED, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>{plan.name}</div>
+              {plan.highlight && <div style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.2)", borderRadius: 100, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: T.white }}>MÁS POPULAR</div>}
+              <div style={{ fontSize: 13, fontWeight: 700, color: plan.highlight ? "rgba(255,255,255,0.75)" : T.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>{plan.name}</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 6 }}>
-                <span style={{ fontSize: 38, fontWeight: 900, color: plan.highlight ? WHITE : TEXT, letterSpacing: "-0.02em" }}>{plan.price}</span>
-                {plan.period && <span style={{ fontSize: 14, color: plan.highlight ? "rgba(255,255,255,0.6)" : MUTED }}>{plan.period}</span>}
+                <span style={{ fontSize: 38, fontWeight: 900, color: plan.highlight ? T.white : T.text, letterSpacing: "-0.02em" }}>{plan.price}</span>
+                {plan.period && <span style={{ fontSize: 14, color: plan.highlight ? "rgba(255,255,255,0.6)" : T.muted }}>{plan.period}</span>}
               </div>
-              <p style={{ fontSize: 13, color: plan.highlight ? "rgba(255,255,255,0.65)" : MUTED, marginBottom: 24, lineHeight: 1.5 }}>{plan.desc}</p>
+              <p style={{ fontSize: 13, color: plan.highlight ? "rgba(255,255,255,0.65)" : T.muted, marginBottom: 24, lineHeight: 1.5 }}>{plan.desc}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
                 {plan.features.map((f, j) => (
                   <div key={j} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ fontSize: 14, color: plan.highlight ? "#93C5FD" : BLUE, fontWeight: 700 }}>✓</span>
-                    <span style={{ fontSize: 14, color: plan.highlight ? "rgba(255,255,255,0.85)" : TEXT }}>{f}</span>
+                    <span style={{ fontSize: 14, color: plan.highlight ? "#93C5FD" : T.blue, fontWeight: 700 }}>✓</span>
+                    <span style={{ fontSize: 14, color: plan.highlight ? "rgba(255,255,255,0.85)" : T.text }}>{f}</span>
                   </div>
                 ))}
               </div>
               <a href="/sign-up" style={{
                 display: "block", textAlign: "center", padding: "12px", borderRadius: 10,
-                background: plan.highlight ? WHITE : BLUE,
-                color: plan.highlight ? BLUE : WHITE,
+                background: plan.highlight ? T.white : T.blue,
+                color: plan.highlight ? T.blue : T.white,
                 fontSize: 14, fontWeight: 700, textDecoration: "none", transition: "opacity 0.2s",
               }}
                 onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
@@ -326,97 +397,4 @@ function CTASection() {
           boxShadow: "0 40px 100px rgba(15,23,42,0.15)",
           position: "relative", overflow: "hidden",
         }}>
-          <div style={{ position: "absolute", top: -60, right: -60, width: 200, height: 200, borderRadius: "50%", background: "rgba(37,99,235,0.2)", pointerEvents: "none" }} />
-          <div style={{ position: "absolute", bottom: -40, left: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(37,211,102,0.08)", pointerEvents: "none" }} />
-          <div style={{ position: "relative" }}>
-            <h2 style={{ fontSize: "clamp(24px,3vw,38px)", fontWeight: 900, color: WHITE, letterSpacing: "-0.02em", marginBottom: 14 }}>
-              ¿Listo para transformar tu WhatsApp?
-            </h2>
-            <p style={{ fontSize: 16, color: "rgba(255,255,255,0.6)", marginBottom: 32, lineHeight: 1.65 }}>
-              Únete a miles de empresas que ya están escalando sus ventas con IA.<br />No requiere tarjeta de crédito.
-            </p>
-            <a href="/sign-up" style={{
-              display: "inline-block", padding: "14px 36px", background: BLUE, borderRadius: 12,
-              fontSize: 15, fontWeight: 700, color: WHITE, textDecoration: "none",
-              boxShadow: "0 4px 20px rgba(37,99,235,0.5)", transition: "all 0.2s",
-            }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(37,99,235,0.6)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(37,99,235,0.5)"; }}>
-              Empieza Gratis Ahora
-            </a>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 14 }}>Configuración en menos de 5 minutos</p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ── Footer ────────────────────────────────────────────────
-function Footer() {
-  const cols = [
-    { title: "Producto", links: ["Funcionalidades", "Integraciones", "Precios", "Casos de éxito"] },
-    { title: "Recursos", links: ["Blog", "Documentación", "Soporte", "API"] },
-    { title: "Legal", links: ["Privacidad", "Términos", "Cookies"] },
-  ];
-  return (
-    <footer style={{ background: WHITE, borderTop: "1px solid #F1F5F9", padding: "52px 24px 32px" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
-          <div>
-            <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 7, background: BLUE, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>💬</div>
-              <span style={{ fontSize: 16, fontWeight: 800, color: TEXT }}>Bot<span style={{ color: BLUE }}>flow</span></span>
-            </a>
-            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.65, maxWidth: 220 }}>Potenciando negocios con inteligencia artificial conversacional.</p>
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              {["𝕏", "in"].map((s, i) => (
-                <a key={i} href="#" style={{ width: 32, height: 32, borderRadius: 8, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: MUTED, textDecoration: "none", transition: "all 0.2s" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = BLUE_MID; e.currentTarget.style.color = BLUE; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#F1F5F9"; e.currentTarget.style.color = MUTED; }}>{s}</a>
-              ))}
-            </div>
-          </div>
-          {cols.map((col, i) => (
-            <div key={i}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 16, letterSpacing: "0.02em" }}>{col.title}</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {col.links.map(link => (
-                  <a key={link} href="#" style={{ fontSize: 13, color: MUTED, textDecoration: "none", transition: "color 0.2s" }}
-                    onMouseEnter={e => e.target.style.color = BLUE}
-                    onMouseLeave={e => e.target.style.color = MUTED}>{link}</a>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 24, textAlign: "center" }}>
-          <p style={{ fontSize: 13, color: "#CBD5E1" }}>© 2024 Botflow. Todos los derechos reservados. · Hecho con ❤️ para el mundo</p>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────
-export default function Home() {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    fetch("/api/landing").then(r => r.json()).then(res => {
-      if (res && Object.keys(res).length > 0) setData(res);
-    }).catch(() => {});
-  }, []);
-
-  return (
-    <main style={{ fontFamily: "system-ui, -apple-system, sans-serif", background: WHITE }}>
-      <Navbar />
-      <Hero data={data} />
-      <HowItWorks />
-      <Benefits />
-      <Pricing data={data} />
-      <CTASection />
-      <Footer />
-    </main>
-  );
-}
+          <div style={{ position: "absolute", top: -60,
