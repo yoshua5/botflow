@@ -7,7 +7,8 @@ export async function GET(req) {
   if (error) return error;
 
   const db = supabase();
-  const { data } = await db.from("announcements").select("*").order("created_at", { ascending: false }).limit(100);
+  const { data, error: dbError } = await db.from("announcements").select("*").order("created_at", { ascending: false }).limit(100);
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
   return NextResponse.json({ announcements: data || [] });
 }
 
@@ -21,24 +22,23 @@ export async function POST(req) {
 
   if (action === "create") {
     const { title, message, cta_text, cta_url, priority, channels, target_segment, scheduled_at } = body;
-    const { data } = await db.from("announcements").insert({
+    const { data, error: dbError } = await db.from("announcements").insert({
       title, message, cta_text, cta_url, priority: priority || "info",
       channels: channels || ["in_app"],
       target_segment: target_segment || "all",
       scheduled_at: scheduled_at || null,
       status: scheduled_at ? "scheduled" : "draft",
     }).select().single();
+    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
     await logAdminAction(session.user.email, "create_announcement", null, { id: data?.id });
     return NextResponse.json({ announcement: data });
   }
 
   if (action === "send") {
     const { announcementId } = body;
-    // Fetch announcement
     const { data: ann } = await db.from("announcements").select("*").eq("id", announcementId).single();
     if (!ann) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // Get target users
     let userQuery = db.from("users").select("id");
     const { data: allUsers } = await userQuery;
     const { data: subs } = await db.from("subscriptions").select("user_id, plan, status");
@@ -50,7 +50,6 @@ export async function POST(req) {
     if (ann.target_segment === "free")    targetUsers = targetUsers.filter(u => !subMap[u.id] || subMap[u.id]?.plan === "free");
     if (ann.target_segment === "expired") targetUsers = targetUsers.filter(u => subMap[u.id]?.status === "canceled");
 
-    // Create in-app notifications
     if ((ann.channels || []).includes("in_app")) {
       const notifications = targetUsers.map(u => ({
         user_id: u.id,
@@ -65,7 +64,6 @@ export async function POST(req) {
       }
     }
 
-    // Update announcement status
     await db.from("announcements").update({
       status: "sent",
       sent_at: new Date().toISOString(),
@@ -78,8 +76,4 @@ export async function POST(req) {
 
   if (action === "delete") {
     await db.from("announcements").delete().eq("id", body.announcementId);
-    return NextResponse.json({ ok: true });
-  }
-
-  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-}
+    return NextResponse.json({ ok: true
