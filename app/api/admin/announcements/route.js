@@ -39,10 +39,10 @@ export async function POST(req) {
     const { data: ann } = await db.from("announcements").select("*").eq("id", announcementId).single();
     if (!ann) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    let userQuery = db.from("users").select("id");
-    const { data: allUsers } = await userQuery;
+    const { data: allUsers } = await db.from("users").select("id");
     const { data: subs } = await db.from("subscriptions").select("user_id, plan, status");
-    const subMap = {};  (subs || []).forEach(s => subMap[s.user_id] = s);
+    const subMap = {};
+    (subs || []).forEach(s => { subMap[s.user_id] = s; });
 
     let targetUsers = allUsers || [];
     if (ann.target_segment === "paid")    targetUsers = targetUsers.filter(u => subMap[u.id]?.status === "active" && subMap[u.id]?.plan !== "free");
@@ -75,5 +75,10 @@ export async function POST(req) {
   }
 
   if (action === "delete") {
-    await db.from("announcements").delete().eq("id", body.announcementId);
-    return NextResponse.json({ ok: true
+    const { error: dbError } = await db.from("announcements").delete().eq("id", body.announcementId);
+    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+}
