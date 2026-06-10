@@ -50,6 +50,9 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
   const fetchData = useCallback(() => {
     fetch("/api/analytics")
@@ -60,7 +63,6 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchData();
-    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -85,25 +87,33 @@ export default function AnalyticsPage() {
     .map(([name, count]) => ({ name, count, pct: Math.round((count / recentMessages.length) * 100) || 0 }));
 
   const clearAnalytics = async () => {
-    if (!confirmClear) { setConfirmClear(true); setTimeout(() => setConfirmClear(false), 4000); return; }
+    if (!confirmClear) { setConfirmClear(true); setTimeout(() => setConfirmClear(false), 5000); return; }
     setConfirmClear(false);
-    await fetch("/api/analytics", { method: "DELETE" });
-    fetchData();
+    // Clear local state immediately so UI feels instant
+    setData({ totalMessages: 0, totalConversations: 0, dailyCounts: {}, recentMessages: [] });
+    const r = await fetch("/api/analytics", { method: "DELETE" });
+    if (r.ok) { showToast("Historial limpiado "); fetchData(); }
+    else { showToast("Error al limpiar", false); fetchData(); }
   };
 
   return (
     <div>
+      {toast && (
+        <div style={{ position:"fixed",top:20,right:20,zIndex:9999,background:toast.ok?"#10B981":"#EF4444",color:"#fff",padding:"11px 18px",borderRadius:10,fontSize:13,fontWeight:600,boxShadow:"0 4px 20px rgba(0,0,0,.15)" }}>
+          {toast.ok ? "" : ""} {toast.msg}
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, letterSpacing: "-0.03em", marginBottom: 4 }}>Analytics</h1>
           <p style={{ fontSize: 15, color: MUTED }}>
-            Datos en tiempo real · {lastUpdated ? `Actualizado ${timeAgo(lastUpdated.toISOString())}` : "Cargando..."}
+            Datos en tiempo real  {lastUpdated ? `Actualizado ${timeAgo(lastUpdated.toISOString())}` : "Cargando..."}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={fetchData} style={{ padding: "8px 16px", background: WHITE, border: "1.5px solid #E2E8F0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: MUTED, cursor: "pointer" }}>↻ Actualizar</button>
+          <button onClick={fetchData} style={{ padding: "8px 16px", background: WHITE, border: "1.5px solid #E2E8F0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: MUTED, cursor: "pointer" }}> Actualizar</button>
           <button onClick={clearAnalytics} style={{ padding: "8px 16px", background: confirmClear ? "#DC2626" : "#FEF2F2", border: confirmClear ? "1.5px solid #DC2626" : "1.5px solid #FCA5A5", borderRadius: 10, fontSize: 13, fontWeight: 600, color: confirmClear ? "#FFFFFF" : "#DC2626", cursor: "pointer", transition: "all 0.2s" }}>
-            {confirmClear ? "¿Confirmar? Haz clic de nuevo" : "🗑️ Limpiar historial"}
+            {confirmClear ? "Confirmar? Haz clic de nuevo" : " Limpiar historial"}
           </button>
         </div>
       </div>
@@ -111,10 +121,10 @@ export default function AnalyticsPage() {
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 28 }}>
         {[
-          { label: "Mensajes totales", value: totalMessages.toLocaleString(), icon: "💬", sub: `${todayCount} hoy` },
-          { label: "Conversaciones", value: totalConversations.toLocaleString(), icon: "👥", sub: "únicas" },
-          { label: "Mensajes hoy", value: todayCount.toLocaleString(), icon: "📅", sub: today },
-          { label: "Bots activos", value: totalMessages > 0 ? "1" : "—", icon: "🤖", sub: "configurado" },
+          { label: "Mensajes totales", value: totalMessages.toLocaleString(), icon: "", sub: `${todayCount} hoy` },
+          { label: "Conversaciones", value: totalConversations.toLocaleString(), icon: "", sub: "nicas" },
+          { label: "Mensajes hoy", value: todayCount.toLocaleString(), icon: "", sub: today },
+          { label: "Bots activos", value: totalMessages > 0 ? "1" : "", icon: "", sub: "configurado" },
         ].map((kpi, i) => (
           <div key={i} style={{
             background: WHITE, borderRadius: 14, padding: "18px 20px",
@@ -136,15 +146,15 @@ export default function AnalyticsPage() {
         {/* Bar chart */}
         <div style={{ background: WHITE, borderRadius: 16, border: "1.5px solid #E2E8F0", padding: "22px 24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: TEXT }}>Mensajes por día</h3>
-            <span style={{ fontSize: 12, color: MUTED }}>Últimos 7 días</span>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: TEXT }}>Mensajes por da</h3>
+            <span style={{ fontSize: 12, color: MUTED }}>ltimos 7 das</span>
           </div>
           {loading ? (
             <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED }}>Cargando...</div>
           ) : totalMessages === 0 ? (
             <div style={{ height: 160, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: MUTED }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
-              <p style={{ fontSize: 13 }}>Aún no hay mensajes registrados</p>
+              <div style={{ fontSize: 32, marginBottom: 8 }}></div>
+              <p style={{ fontSize: 13 }}>An no hay mensajes registrados</p>
             </div>
           ) : (
             <BarChart dailyCounts={dailyCounts} />
@@ -158,7 +168,7 @@ export default function AnalyticsPage() {
             <p style={{ fontSize: 11, color: MUTED }}>Nombres que tuvo tu bot en conversaciones pasadas</p>
           </div>
           {topBots.length === 0 ? (
-            <div style={{ color: MUTED, fontSize: 13, textAlign: "center", paddingTop: 40 }}>Sin datos aún</div>
+            <div style={{ color: MUTED, fontSize: 13, textAlign: "center", paddingTop: 40 }}>Sin datos an</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {topBots.map((b, i) => (
@@ -181,12 +191,12 @@ export default function AnalyticsPage() {
       <div style={{ background: WHITE, borderRadius: 16, border: "1.5px solid #E2E8F0", overflow: "hidden" }}>
         <div style={{ padding: "18px 24px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ fontSize: 16, fontWeight: 800, color: TEXT }}>Mensajes Recientes</h3>
-          <span style={{ fontSize: 12, color: MUTED }}>Últimos {recentMessages.length} mensajes</span>
+          <span style={{ fontSize: 12, color: MUTED }}>ltimos {recentMessages.length} mensajes</span>
         </div>
         {recentMessages.length === 0 ? (
           <div style={{ padding: "48px", textAlign: "center", color: MUTED }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
-            <p>Los mensajes de WhatsApp aparecerán aquí en tiempo real.</p>
+            <div style={{ fontSize: 32, marginBottom: 8 }}></div>
+            <p>Los mensajes de WhatsApp aparecern aqu en tiempo real.</p>
           </div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -198,18 +208,4 @@ export default function AnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {recentMessages.map((m, i) => (
-                <tr key={i} style={{ borderTop: "1px solid #F1F5F9" }}>
-                  <td style={{ padding: "13px 20px", fontSize: 13, fontWeight: 600, color: TEXT }}>{m.from}</td>
-                  <td style={{ padding: "13px 20px", fontSize: 13, color: MUTED }}>{m.botName}</td>
-                  <td style={{ padding: "13px 20px", fontSize: 13, color: MUTED, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.message}</td>
-                  <td style={{ padding: "13px 20px", fontSize: 13, color: MUTED }}>{timeAgo(m.time)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
-}
+              {recentMessages.ma
