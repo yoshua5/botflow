@@ -63,6 +63,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchData();
+    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -89,10 +90,9 @@ export default function AnalyticsPage() {
   const clearAnalytics = async () => {
     if (!confirmClear) { setConfirmClear(true); setTimeout(() => setConfirmClear(false), 5000); return; }
     setConfirmClear(false);
-    // Clear local state immediately so UI feels instant
     setData({ totalMessages: 0, totalConversations: 0, dailyCounts: {}, recentMessages: [] });
     const r = await fetch("/api/analytics", { method: "DELETE" });
-    if (r.ok) { showToast("Historial limpiado "); fetchData(); }
+    if (r.ok) { showToast("Historial limpiado"); fetchData(); }
     else { showToast("Error al limpiar", false); fetchData(); }
   };
 
@@ -100,7 +100,7 @@ export default function AnalyticsPage() {
     <div>
       {toast && (
         <div style={{ position:"fixed",top:20,right:20,zIndex:9999,background:toast.ok?"#10B981":"#EF4444",color:"#fff",padding:"11px 18px",borderRadius:10,fontSize:13,fontWeight:600,boxShadow:"0 4px 20px rgba(0,0,0,.15)" }}>
-          {toast.ok ? "" : ""} {toast.msg}
+          {toast.ok ? "Historial limpiado" : toast.msg}
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
@@ -208,4 +208,18 @@ export default function AnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {recentMessages.ma
+              {recentMessages.map((m, i) => (
+                <tr key={i} style={{ borderTop: "1px solid #F1F5F9" }}>
+                  <td style={{ padding: "13px 20px", fontSize: 13, fontWeight: 600, color: TEXT }}>{m.from}</td>
+                  <td style={{ padding: "13px 20px", fontSize: 13, color: MUTED }}>{m.botName}</td>
+                  <td style={{ padding: "13px 20px", fontSize: 13, color: MUTED, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.message}</td>
+                  <td style={{ padding: "13px 20px", fontSize: 13, color: MUTED }}>{timeAgo(m.time)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
