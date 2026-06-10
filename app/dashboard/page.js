@@ -184,10 +184,6 @@ function OnboardingChecklist({ hasBots }) {
             <Link href={s.href} style={{ fontSize: 13, color: T.blue, fontWeight: 600, textDecoration: "none" }}>
               {s.label} →
             </Link>
-          {s.href && !s.done ? (
-            <Link href={s.href} style={{ fontSize: 13, color: T.blue, fontWeight: 600, textDecoration: "none" }}>
-              {s.label} →
-            </Link>
           ) : (
             <span style={{ fontSize: 13, color: s.done ? T.muted : T.text, fontWeight: s.done ? 400 : 500 }}>
               {s.label}

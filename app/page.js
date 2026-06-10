@@ -396,6 +396,7 @@ function CTASection() {
           borderRadius: 28, padding: "64px 48px", textAlign: "center",
           boxShadow: "0 40px 100px rgba(15,23,42,0.15)",
           position: "relative", overflow: "hidden",
+        }}>  
           <div style={{ position: "absolute", top: -60, left: -60, width: 240, height: 240, borderRadius: "50%", background: "radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ position: "absolute", bottom: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,211,238,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ position: "relative", zIndex: 1 }}>
