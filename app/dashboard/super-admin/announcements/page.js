@@ -15,8 +15,9 @@ const SEGMENTS = [
   { key:"expired",  label:"Expirados" },
 ];
 const CHANNELS = [
-  { key:"in_app", label:"🔔 In-App" },
-  { key:"email",  label:"📧 Email" },
+  { key:"in_app",    label:"🔔 In-App" },
+  { key:"email",     label:"📧 Email" },
+  { key:"whatsapp",  label:"💬 WhatsApp" },
 ];
 
 export default function AnnouncementsPage() {

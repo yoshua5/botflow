@@ -2,6 +2,18 @@ import { NextResponse } from "next/server";
 import { requireAdmin, logAdminAction } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 
+async function sendWA(to, text) {
+  const token   = process.env.WA_ACCESS_TOKEN;
+  const phoneId = process.env.WA_PHONE_NUMBER_ID;
+  if (!token || !phoneId) return;
+  const phone = to.replace(/[^0-9]/g, "");
+  await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ messaging_product: "whatsapp", to: phone, type: "text", text: { body: text } }),
+  });
+}
+
 export async function GET(req) {
   const { error } = await requireAdmin();
   if (error) return error;
@@ -39,7 +51,7 @@ export async function POST(req) {
     const { data: ann } = await db.from("announcements").select("*").eq("id", announcementId).single();
     if (!ann) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const { data: allUsers } = await db.from("users").select("id");
+    const { data: allUsers } = await db.from("users").select("id, whatsapp_phone");
     const { data: subs } = await db.from("subscriptions").select("user_id, plan, status");
     const subMap = {};
     (subs || []).forEach(s => { subMap[s.user_id] = s; });
@@ -50,7 +62,9 @@ export async function POST(req) {
     if (ann.target_segment === "free")    targetUsers = targetUsers.filter(u => !subMap[u.id] || subMap[u.id]?.plan === "free");
     if (ann.target_segment === "expired") targetUsers = targetUsers.filter(u => subMap[u.id]?.status === "canceled");
 
-    if ((ann.channels || []).includes("in_app")) {
+    const channels = ann.channels || [];
+
+    if (channels.includes("in_app")) {
       const notifications = targetUsers.map(u => ({
         user_id: u.id,
         announcement_id: ann.id,
@@ -64,10 +78,18 @@ export async function POST(req) {
       }
     }
 
+    if (channels.includes("whatsapp")) {
+      const waText = ann.cta_url
+        ? `*${ann.title}*\n\n${ann.message}\n\n${ann.cta_text || "Ver mas"}: ${ann.cta_url}`
+        : `*${ann.title}*\n\n${ann.message}`;
+      const waUsers = targetUsers.filter(u => u.whatsapp_phone);
+      await Promise.allSettled(waUsers.map(u => sendWA(u.whatsapp_phone, waText)));
+    }
+
     await db.from("announcements").update({
       status: "sent",
       sent_at: new Date().toISOString(),
-      delivery_stats: { sent: targetUsers.length, channels: ann.channels },
+      delivery_stats: { sent: targetUsers.length, channels },
     }).eq("id", announcementId);
 
     await logAdminAction(session.user.email, "send_announcement", null, { id: announcementId, recipients: targetUsers.length });

@@ -75,7 +75,7 @@ function SaveBtn({ loading, saved, onClick, label = "Guardar cambios" }) {
 export default function CuentaPage() {
   const { data: session } = useSession();
   const [biz, setBiz] = useState({ businessName: "", siteName: "", website: "", faviconBase64: "", faviconMimeType: "" });
-  const [user, setUser] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const [user, setUser] = useState({ name: "", email: "", password: "", confirmPassword: "", whatsapp_phone: "" });
   const [plan, setPlan] = useState(null);
   const [savingBiz, setSavingBiz] = useState(false), [savedBiz, setSavedBiz] = useState(false);
   const [savingUser, setSavingUser] = useState(false), [savedUser, setSavedUser] = useState(false);
@@ -86,6 +86,9 @@ export default function CuentaPage() {
   useEffect(() => {
     if (!session) return;
     setUser(u => ({ ...u, name: session.user?.name || "", email: session.user?.email || "" }));
+    fetch("/api/user/profile").then(r => r.json()).then(d => {
+      setUser(u => ({ ...u, whatsapp_phone: d.whatsapp_phone || "" }));
+    });
     fetch("/api/config").then(r => r.json()).then(cfg => {
       setBiz({ businessName: cfg.businessName || "", siteName: cfg.siteName || "", website: cfg.website || "", faviconBase64: cfg.faviconBase64 || "", faviconMimeType: cfg.faviconMimeType || "" });
       if (cfg.faviconBase64) setLogoPreview(`data:${cfg.faviconMimeType || "image/png"};base64,${cfg.faviconBase64}`);
@@ -117,7 +120,7 @@ export default function CuentaPage() {
     if (user.password && user.password !== user.confirmPassword) { alert("Las contraseñas no coinciden"); return; }
     if (user.password && user.password.length < 6) { alert("La contraseña debe tener al menos 6 caracteres"); return; }
     setSavingUser(true); setSavedUser(false);
-    const body = { name: user.name };
+    const body = { name: user.name, whatsapp_phone: user.whatsapp_phone };
     if (user.password) body.password = user.password;
     const r = await fetch("/api/user/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await r.json();
@@ -175,6 +178,9 @@ export default function CuentaPage() {
             </Field>
             <Field label="Correo electrónico" hint="Para cambiar el correo contacta soporte.">
               <Input value={user.email} disabled />
+            </Field>
+            <Field label="WhatsApp personal 💬" hint="Número con código de país. Ej: 5215512345678. Necesario para recibir anuncios por WhatsApp.">
+              <Input value={user.whatsapp_phone} onChange={e => setUser(u => ({ ...u, whatsapp_phone: e.target.value }))} placeholder="5215512345678" />
             </Field>
             <div style={{ borderTop: `1px solid ${BD}`, margin: "20px 0" }} />
             <p style={{ margin: "0 0 16px", fontSize: 13, fontWeight: 600, color: TX }}>Cambiar contraseña</p>
