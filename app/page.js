@@ -396,5 +396,92 @@ function CTASection() {
           borderRadius: 28, padding: "64px 48px", textAlign: "center",
           boxShadow: "0 40px 100px rgba(15,23,42,0.15)",
           position: "relative", overflow: "hidden",
-        }}>
-          <div style={{ position: "absolute", top: -60,
+          <div style={{ position: "absolute", top: -60, left: -60, width: 240, height: 240, borderRadius: "50%", background: "radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", bottom: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle, rgba(34,211,238,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <h2 style={{ fontSize: "clamp(26px,3vw,42px)", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.02em", marginBottom: 16 }}>
+              Listo para automatizar tu negocio?
+            </h2>
+            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.7)", marginBottom: 32, maxWidth: 480, margin: "0 auto 32px" }}>
+              Unete a cientos de empresas que ya usan AgentFlow para crecer sin limites.
+            </p>
+            <a href="/sign-up" style={{
+              display: "inline-block", padding: "15px 40px", background: "#FFFFFF",
+              borderRadius: 12, fontSize: 16, fontWeight: 800, color: "#2563EB",
+              textDecoration: "none", boxShadow: "0 8px 30px rgba(0,0,0,0.2)", transition: "all 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.28)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.2)"; }}>
+              Empieza Gratis Ahora
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Footer ─────────────────────────────────────────────────
+function Footer() {
+  return (
+    <footer style={{ background: "#0F172A", padding: "48px 24px 32px", color: "rgba(255,255,255,0.5)" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 32, marginBottom: 40 }}>
+          <div style={{ maxWidth: 280 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
+              <AgentLogo size={30} />
+              <span style={{ fontSize: 17, fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.03em" }}>
+                Agent<span style={{ color: "#60A5FA" }}>Flow</span>
+              </span>
+            </div>
+            <p style={{ fontSize: 13, lineHeight: 1.65, color: "rgba(255,255,255,0.45)" }}>
+              Plataforma de agentes de IA para automatizar la atencion al cliente en WhatsApp y mas canales.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 60, flexWrap: "wrap" }}>
+            {[
+              { title: "Producto", links: ["Como funciona", "Funciones", "Precios", "Blog"] },
+              { title: "Empresa",  links: ["Nosotros", "Terminos", "Privacidad", "Contacto"] },
+            ].map(col => (
+              <div key={col.title}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>{col.title}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {col.links.map(l => (
+                    <a key={l} href="#" style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none", transition: "color 0.2s" }}
+                      onMouseEnter={e => e.target.style.color = "#FFFFFF"}
+                      onMouseLeave={e => e.target.style.color = "rgba(255,255,255,0.5)"}>{l}</a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <span style={{ fontSize: 12 }}>2025 AgentFlow. Todos los derechos reservados.</span>
+          <span style={{ fontSize: 12 }}>Hecho con para negocios que quieren crecer</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ── Landing Page ──────────────────────────────────────────
+export default function LandingPage() {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    fetch("/api/landing").then(r => r.json()).then(setData).catch(() => {});
+  }, []);
+  return (
+    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", background: T.white }}>
+      <Navbar />
+      <Hero data={data} />
+      <SocialProof />
+      <HowItWorks />
+      <Features />
+      <Testimonials />
+      <Pricing data={data} />
+      <CTASection />
+      <Footer />
+    </div>
+  );
+}

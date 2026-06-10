@@ -184,5 +184,126 @@ function OnboardingChecklist({ hasBots }) {
             <Link href={s.href} style={{ fontSize: 13, color: T.blue, fontWeight: 600, textDecoration: "none" }}>
               {s.label} →
             </Link>
+          {s.href && !s.done ? (
+            <Link href={s.href} style={{ fontSize: 13, color: T.blue, fontWeight: 600, textDecoration: "none" }}>
+              {s.label} →
+            </Link>
           ) : (
-            <span style={{ fontSize: 13, color: s.done ? T.muted : T.text, fontWeight: s.done ? 
+            <span style={{ fontSize: 13, color: s.done ? T.muted : T.text, fontWeight: s.done ? 400 : 500 }}>
+              {s.label}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Main Dashboard Page ─────────────────────────────────────────
+export default function DashboardPage() {
+  const { data: session } = useSession();
+  const [bots, setBots]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [greeting, setGreeting] = useState("Buenos dias");
+
+  useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h < 12 ? "Buenos dias" : h < 18 ? "Buenas tardes" : "Buenas noches");
+    fetch("/api/bots").then(r => r.json()).then(d => { setBots(d || []); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
+
+  const totalMsgs  = bots.reduce((s, b) => s + (b.messageCount || 0), 0);
+  const totalConvs = bots.reduce((s, b) => s + (b.conversationCount || 0), 0);
+  const activeBots = bots.filter(b => b.status === "ACTIVO").length;
+  const name = session?.user?.name?.split(" ")[0] || "ahi";
+
+  const KPIs = [
+    { icon: "🤖", label: "Agentes activos",    value: activeBots,                     sub: `de ${bots.length} total`,           trend: 12,  color: "#2563EB" },
+    { icon: "💬", label: "Mensajes totales",    value: totalMsgs.toLocaleString(),     sub: "ultimos 30 dias",                   trend: 23,  color: "#10B981" },
+    { icon: "🗣️", label: "Conversaciones",      value: totalConvs.toLocaleString(),    sub: "sesiones unicas",                   trend: 8,   color: "#F59E0B" },
+    { icon: "⚡", label: "Tiempo de respuesta", value: "< 2s",                         sub: "promedio",                          trend: -5,  color: "#8B5CF6" },
+  ];
+
+  const QUICK_ACTIONS = [
+    { icon: "➕", label: "Nuevo Bot",    href: "/dashboard/create" },
+    { icon: "📊", label: "Analytics",   href: "/dashboard/analytics" },
+    { icon: "👥", label: "Contactos",   href: "/dashboard/contactos" },
+    { icon: "📅", label: "Citas",       href: "/dashboard/citas" },
+    { icon: "⚙️", label: "Config",      href: "/dashboard/configuracion/cuenta" },
+  ];
+
+  const ACTIVITY = [
+    { icon: "💬", text: "Nueva conversacion iniciada en bot principal",   time: "hace 2 min",    color: "#2563EB" },
+    { icon: "📅", text: "Cita agendada para manana a las 10:00 AM",       time: "hace 15 min",   color: "#10B981" },
+    { icon: "🤖", text: "Bot Ventas IA activado correctamente",           time: "hace 1 hora",   color: "#8B5CF6" },
+    { icon: "⚡", text: "Webhook de WhatsApp conectado exitosamente",     time: "hace 3 horas",  color: "#F59E0B" },
+  ];
+
+  return (
+    <div style={{ padding: "28px 32px", maxWidth: 1300, margin: "0 auto" }}>
+
+      {/* Welcome Banner */}
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 900, color: T.text, letterSpacing: "-0.02em", marginBottom: 4 }}>
+          {greeting}, {name}!
+        </h1>
+        <p style={{ fontSize: 14, color: T.muted }}>
+          Aqui tienes un resumen de tu actividad hoy
+        </p>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 28 }}>
+        {KPIs.map((k, i) => <KPICard key={i} {...k} />)}
+      </div>
+
+      {/* Quick Actions */}
+      <div style={{ background: T.white, borderRadius: 14, padding: "20px 22px", border: `1px solid ${T.border}`, marginBottom: 28 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>Acciones rapidas</div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {QUICK_ACTIONS.map((a, i) => <QuickAction key={i} {...a} />)}
+        </div>
+      </div>
+
+      {/* Two-column: Bots + Right panel */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 20 }}>
+
+        {/* Bots Grid */}
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: T.text }}>Tus Agentes</span>
+            <a href="/dashboard/create" style={{ fontSize: 13, color: T.blue, fontWeight: 600, textDecoration: "none" }}>+ Nuevo</a>
+          </div>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: 40, color: T.muted }}>Cargando agentes...</div>
+          ) : bots.length === 0 ? (
+            <div style={{ background: T.white, borderRadius: 14, padding: "40px 24px", textAlign: "center", border: `1px solid ${T.border}` }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🤖</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 8 }}>Aun no tienes agentes</div>
+              <div style={{ fontSize: 13, color: T.muted, marginBottom: 20 }}>Crea tu primer agente y empieza a automatizar</div>
+              <a href="/dashboard/create" style={{ padding: "10px 22px", background: T.blue, color: T.white, borderRadius: 9, fontSize: 14, fontWeight: 700, textDecoration: "none", display: "inline-block" }}>
+                Crear primer agente
+              </a>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 14 }}>
+              {bots.map(bot => <BotCard key={bot.id} bot={bot} />)}
+            </div>
+          )}
+        </div>
+
+        {/* Right Panel */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Activity Feed */}
+          <div style={{ background: T.white, borderRadius: 14, padding: "22px 24px", border: `1px solid ${T.border}` }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 16 }}>Actividad reciente</div>
+            {ACTIVITY.map((a, i) => <ActivityItem key={i} {...a} />)}
+          </div>
+
+          {/* Onboarding */}
+          <OnboardingChecklist hasBots={bots.length > 0} />
+        </div>
+      </div>
+    </div>
+  );
+}

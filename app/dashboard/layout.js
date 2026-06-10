@@ -495,4 +495,69 @@ function ChatWidget() {
                 <div style={{ padding: "10px 14px", background: T.surface, borderRadius: "14px 14px 14px 4px", fontSize: 18 }}>
                   <span style={{ animation: "pulse 1s infinite" }}>●</span>
                   <span style={{ animation: "pulse 1s infinite 0.2s" }}>●</span>
-       
+                  <span style={{ animation: "pulse 1s infinite 0.4s" }}>●</span>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input bar */}
+          <div style={{ padding: "10px 12px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && send(input)}
+              placeholder="Escribe un mensaje..."
+              style={{
+                flex: 1, padding: "9px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
+                fontSize: 13, outline: "none", fontFamily: "inherit", color: T.text, background: T.surface,
+              }}
+              onFocus={e => { e.target.style.borderColor = "#93C5FD"; e.target.style.background = T.white; }}
+              onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.surface; }}
+            />
+            <button onClick={startVoice} style={{
+              width: 36, height: 36, borderRadius: 9, border: `1.5px solid ${T.border}`,
+              background: listening ? "#FEF2F2" : T.white, cursor: "pointer", fontSize: 16,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }} title="Entrada de voz">
+              {listening ? "\u23F9" : "\uD83C\uDFA4"}
+            </button>
+            <button onClick={() => send(input)} disabled={loading || !input.trim()} style={{
+              width: 36, height: 36, borderRadius: 9, background: T.blue, border: "none",
+              cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              opacity: loading || !input.trim() ? 0.5 : 1, flexShrink: 0,
+            }}>
+              <span style={{ color: T.white, fontSize: 14 }}>{"\u27A4"}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes chatIn { from { opacity:0; transform:translateY(12px) scale(0.97) } to { opacity:1; transform:none } }
+        @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+      `}</style>
+    </>
+  );
+}
+
+// ── Dashboard Layout ──────────────────────────────────────
+export default function DashboardLayout({ children }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const sidebarWidth = collapsed ? 64 : 240;
+
+  return (
+    <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFF", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      <DynamicHead />
+      <Sidebar collapsed={collapsed} />
+      <div style={{ flex: 1, marginLeft: sidebarWidth, transition: "margin-left 0.22s ease" }}>
+        <TopBar sidebarWidth={sidebarWidth} collapsed={collapsed} setCollapsed={setCollapsed} />
+        <main style={{ marginTop: 60, minHeight: "calc(100vh - 60px)" }}>
+          {children}
+        </main>
+      </div>
+      <ChatWidget />
+    </div>
+  );
+}
