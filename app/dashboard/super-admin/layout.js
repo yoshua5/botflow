@@ -13,6 +13,7 @@ const NAV = [
   { label: "Planes",      href: "/dashboard/super-admin/plans" },
   { label: "Anuncios",    href: "/dashboard/super-admin/announcements" },
   { label: "Facturación", href: "/dashboard/super-admin/billing" },
+  { label: "Comisiones",  href: "/dashboard/super-admin/comisiones" },
   { label: "Landing CMS", href: "/dashboard/super-admin/landing-cms" },
 ];
 

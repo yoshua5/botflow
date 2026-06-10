@@ -70,6 +70,11 @@ const GROUPS = [
     extra: "catalogos",
   },
   {
+    label: "TIENDA",
+    items: [],
+    extra: "tienda",
+  },
+  {
     label: "CLIENTES",
     items: [
       { icon: "👥", label: "Contactos",  href: "/dashboard/contactos" },
@@ -87,6 +92,11 @@ const CATALOGOS_CHILDREN = [
   { icon: "🖼️", label: "Ver Catálogo",    href: "/dashboard/catalogos" },
   { icon: "📤", label: "Subir Contenido", href: "/dashboard/catalogos/contenido" },
   { icon: "🌐", label: "Desde Sitio Web", href: "/dashboard/catalogos/sitio-web" },
+];
+
+const TIENDA_CHILDREN = [
+  { icon: "🏪", label: "Mis Productos", href: "/dashboard/tienda" },
+  { icon: "💳", label: "Pagos",         href: "/dashboard/pagos" },
 ];
 
 const CONFIG_CHILDREN = [
@@ -129,8 +139,10 @@ function Sidebar({ collapsed }) {
   const isSuperAdmin = email === "yoshualeisorek17@gmail.com";
   const isCatalogosActive = pathname.startsWith("/dashboard/catalogos");
   const isConfigActive    = pathname.startsWith("/dashboard/configuracion");
+  const isTiendaActive    = pathname.startsWith("/dashboard/tienda") || pathname.startsWith("/dashboard/pagos");
   const [catalogosOpen, setCatalogosOpen] = useState(isCatalogosActive);
   const [configOpen,    setConfigOpen]    = useState(isConfigActive);
+  const [tiendaOpen,    setTiendaOpen]    = useState(isTiendaActive);
   const [planName, setPlanName]  = useState("FREE");
   const [siteName, setSiteName]  = useState("");
 

@@ -196,6 +196,17 @@ export async function POST(request) {
     const knowledge      = await getAllKBText(userId);
     const kbImages       = await getKBImages(userId);
     const history        = await getConversation(from, userId);
+
+    // Load Tienda catalog items from Supabase
+    let catalogItems = [];
+    try {
+      const db = supabase();
+      const { data: catRows } = await db.from("catalog_items")
+        .select("id, name, description, price, currency, type, images, tags")
+        .eq("user_id", userId).eq("status", "active").order("name");
+      catalogItems = catRows || [];
+      if (catalogItems.length) console.log(`🛒 Catalog: ${catalogItems.length} items`);
+    } catch (e) { console.error("Catalog load error:", e.message); }
     const availableSlots = config.appointments?.enabled && config.appointments?.calendarId && config.appointments?.googleCredentials
       ? await getAvailableSlots(config.appointments).catch(() => null)
       : null;
@@ -204,7 +215,7 @@ export async function POST(request) {
     if (kbImages.length) console.log(`🖼️ Imágenes en KB: ${kbImages.length}`);
     if (availableSlots) console.log(`📅 Slots disponibles en prompt`);
 
-    const aiReply = await callClaude(text, config, knowledge, kbImages, history, availableSlots);
+    const aiReply = await callClaude(text, config, knowledge, kbImages, history, availableSlots, catalogItems);
 
     const updatedHistory = [
       ...history,
@@ -238,6 +249,11 @@ export async function POST(request) {
         console.error("Failed to parse [BOOK_APPOINTMENT]:", err.message);
       }
     }
+
+    // Parse [SEND_PAYMENT_LINK:itemId] markers
+    const paymentLinkRegex = /\[SEND_PAYMENT_LINK:([^\]]+)\]/gi;
+    const paymentMarkers = [...cleanReply.matchAll(paymentLinkRegex)];
+    cleanReply = cleanReply.replace(paymentLinkRegex, "").trim();
 
     // Parse [SEND_BOOKING_LINK] marker
     const hasBookingLink = cleanReply.includes("[SEND_BOOKING_LINK]");
@@ -273,6 +289,33 @@ export async function POST(request) {
         : process.env.NEXTAUTH_URL || "https://botflow-eight.vercel.app";
       const bookingUrl = `${baseUrl}/booking?from=${encodeURIComponent(from)}`;
       await sendWhatsAppText(from, `📅 Elige tu fecha y hora aquí:\n${bookingUrl}`, config);
+    }
+
+    // Send payment links for catalog items
+    for (const match of paymentMarkers) {
+      const itemId = match[1].trim();
+      const item = catalogItems.find(c => c.id === itemId);
+      if (!item) { console.warn("Payment link: item not found", itemId); continue; }
+      try {
+        const origin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://botflow-eight.vercel.app";
+        const r = await fetch(`${origin}/api/catalog/checkout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, itemId, customerPhone: from, customerName: contactName }),
+        });
+        const d = await r.json();
+        if (d.url) {
+          const price = item.price ? `${parseFloat(item.price).toFixed(2)} ${item.currency}` : "";
+          const linkMsg = `Aqui tienes el enlace de pago para *${item.name}*${price ? " (" + price + ")" : ""}:\n\n${d.url}`;
+          await sendWhatsAppText(from, linkMsg, config);
+          console.log(`💳 Payment link sent for ${item.name}`);
+        } else {
+          console.error("Checkout error:", d.error);
+          await sendWhatsAppText(from, "Lo siento, hubo un problema generando el link de pago. Por favor contacta directamente.", config);
+        }
+      } catch (err) {
+        console.error("Payment link error:", err.message);
+      }
     }
 
     // Send each image from Claude markers
@@ -518,7 +561,7 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
   return false;
 }
 
-async function callClaude(userMessage, config, knowledge = "", kbImages = [], history = [], availableSlots = null) {
+async function callClaude(userMessage, config, knowledge = "", kbImages = [], history = [], availableSlots = null, catalogItems = []) {
   const rawAgent = config.agentName || "";
   const isGeneric = !rawAgent || rawAgent === "Asistente" || rawAgent === "Assistant" || rawAgent === "Bot";
   const agentName = isGeneric
