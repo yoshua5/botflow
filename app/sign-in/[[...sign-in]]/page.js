@@ -39,7 +39,7 @@ export default function SignInPage() {
     const result = await signIn("credentials", { email, password, redirect: false });
     setLoading(false);
     if (result?.error) {
-      setError("Email o contraseña incorrectos. Intenta de nuevo.");
+      setError("Email o contrasena incorrectos. Intenta de nuevo.");
     } else if (result?.ok) {
       router.push("/dashboard");
     }
@@ -63,7 +63,6 @@ export default function SignInPage() {
         boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 20px 50px rgba(0,0,0,0.08)",
         border: "1px solid #E2E8F0",
       }}>
-        {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28, justifyContent: "center" }}>
           <AgentLogo size={38} />
           <span style={{ fontSize: 22, fontWeight: 900, color: "#0F172A", letterSpacing: "-0.03em" }}>
@@ -81,10 +80,9 @@ export default function SignInPage() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Email */}
           <div>
             <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 600, color: "#0F172A" }}>
-              Correo electrónico
+              Correo electronico
             </label>
             <input
               type="email" value={email} onChange={e => setEmail(e.target.value)}
@@ -94,6 +92,61 @@ export default function SignInPage() {
             />
           </div>
 
-          {/* Password */}
           <div>
-            <div style={{ display: "flex", justifyContent: "s
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>Contrasena</label>
+              <a href="/forgot-password" style={{ fontSize: 12, color: "#2563EB", textDecoration: "none", fontWeight: 600 }}>
+                Olvidaste tu contrasena?
+              </a>
+            </div>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="Tu contrasena" required
+                style={{ ...inputBase, paddingRight: 42 }}
+                onFocus={e => { e.target.style.borderColor = "#93C5FD"; e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.1)"; e.target.style.background = "#FFFFFF"; }}
+                onBlur={e => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; e.target.style.background = "#FAFBFF"; }}
+              />
+              <button type="button" onClick={() => setShowPw(p => !p)} style={{
+                position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                background: "none", border: "none", cursor: "pointer", padding: 0,
+                fontSize: 16, color: "#94A3B8", lineHeight: 1,
+              }}>
+                {showPw ? "Hide" : "Show"}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div style={{
+              padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA",
+              color: "#DC2626", borderRadius: 8, fontSize: 13,
+            }}>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={loading} style={{
+            marginTop: 4, padding: "13px", background: loading ? "#93C5FD" : "#2563EB",
+            color: "#FFFFFF", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700,
+            cursor: loading ? "not-allowed" : "pointer", transition: "all 0.15s",
+            boxShadow: loading ? "none" : "0 3px 10px rgba(37,99,235,0.3)",
+          }}
+            onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = "#1D4ED8"; } }}
+            onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = "#2563EB"; } }}>
+            {loading ? "Iniciando sesion..." : "Iniciar sesion"}
+          </button>
+        </form>
+
+        <p style={{ marginTop: 22, textAlign: "center", color: "#64748B", fontSize: 13 }}>
+          No tienes cuenta?{" "}
+          <a href="/sign-up" style={{ color: "#2563EB", fontWeight: 700, textDecoration: "none" }}>Registrate gratis</a>
+        </p>
+      </div>
+
+      <p style={{ marginTop: 20, fontSize: 12, color: "#94A3B8", textAlign: "center" }}>
+        AgentFlow - Plataforma de Agentes con IA
+      </p>
+    </div>
+  );
+}
