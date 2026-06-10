@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 
-const DEFAULT_PLAN = { id:"", name:"", price:0, interval:"month", color:"#6366F1", badge:"", limits:{ bots:1, messagesPerMonth:1000, knowledgeFiles:10, analytics:false, whatsapp:false }, features:[] };
+const DEFAULT_PLAN = { id:"", name:"", price:0, interval:"month", color:"#2563EB", badge:"", limits:{ bots:1, messagesPerMonth:1000, knowledgeFiles:10, analytics:false, whatsapp:false }, features:[] };
 
 export default function PlansPage() {
   const [plans, setPlans] = useState([]);
@@ -45,33 +45,33 @@ export default function PlansPage() {
 
   return (
     <div>
-      {toast && <div style={{ position:"fixed",top:20,right:20,zIndex:9999,background:toast.ok?"#22C55E":"#EF4444",color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600 }}>{toast.ok?"✅":"❌"} {toast.msg}</div>}
+      {toast && <div style={{ position:"fixed",top:20,right:20,zIndex:9999,background:toast.ok?"#22C55E":"#EF4444",color:"#0F172A",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600 }}>{toast.ok?"✅":"❌"} {toast.msg}</div>}
 
       <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24 }}>
         <div>
-          <h1 style={{ fontSize:22,fontWeight:800,color:"#fff",margin:0 }}>Gestión de Planes</h1>
-          <div style={{ fontSize:13,color:"#475569",marginTop:4 }}>Crea y modifica los planes de AgentFlow</div>
+          <h1 style={{ fontSize:22,fontWeight:800,color:"#0F172A",margin:0 }}>Gestión de Planes</h1>
+          <div style={{ fontSize:13,color:"#64748B",marginTop:4 }}>Crea y modifica los planes de AgentFlow</div>
         </div>
         <button onClick={()=>{ setForm(DEFAULT_PLAN); setEditing("new"); }}
-          style={{ padding:"9px 18px",background:"#6366F1",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer" }}>
+          style={{ padding:"9px 18px",background:"#2563EB",border:"none",borderRadius:8,color:"#0F172A",fontSize:13,fontWeight:600,cursor:"pointer" }}>
           + Nuevo Plan
         </button>
       </div>
 
       {/* Plan cards */}
       <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16,marginBottom:24 }}>
-        {loading && <div style={{ color:"#475569" }}>Cargando...</div>}
+        {loading && <div style={{ color:"#64748B" }}>Cargando...</div>}
         {plans.map(p => (
-          <div key={p.id} style={{ background:"#111118",border:`1px solid ${PLAN_COLORS[p.id]||"#1E1E2E"}44`,borderRadius:12,padding:20 }}>
+          <div key={p.id} style={{ background:"#FFFFFF",border:`1px solid ${PLAN_COLORS[p.id]||"#0F172A"}44`,borderRadius:12,padding:20 }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
               <div>
-                <div style={{ fontWeight:700,fontSize:16,color:"#fff" }}>{p.name}</div>
-                {p.badge && <div style={{ fontSize:10,fontWeight:700,color:PLAN_COLORS[p.id]||"#6366F1",textTransform:"uppercase" }}>{p.badge}</div>}
+                <div style={{ fontWeight:700,fontSize:16,color:"#0F172A" }}>{p.name}</div>
+                {p.badge && <div style={{ fontSize:10,fontWeight:700,color:PLAN_COLORS[p.id]||"#2563EB",textTransform:"uppercase" }}>{p.badge}</div>}
               </div>
-              <div style={{ fontSize:22,fontWeight:800,color:PLAN_COLORS[p.id]||"#6366F1" }}>${p.price}</div>
+              <div style={{ fontSize:22,fontWeight:800,color:PLAN_COLORS[p.id]||"#2563EB" }}>${p.price}</div>
             </div>
-            <div style={{ fontSize:12,color:"#475569",marginBottom:12 }}>/{p.interval||"mes"}</div>
-            <div style={{ fontSize:11,color:"#475569",lineHeight:1.8 }}>
+            <div style={{ fontSize:12,color:"#64748B",marginBottom:12 }}>/{p.interval||"mes"}</div>
+            <div style={{ fontSize:11,color:"#64748B",lineHeight:1.8 }}>
               <div>Bots: {p.limits?.bots === -1 ? "∞" : p.limits?.bots}</div>
               <div>Mensajes: {p.limits?.messagesPerMonth === -1 ? "∞" : (p.limits?.messagesPerMonth||0).toLocaleString()}/mes</div>
               <div>WhatsApp: {p.limits?.whatsapp ? "✅" : "❌"}</div>
@@ -79,11 +79,11 @@ export default function PlansPage() {
             </div>
             <div style={{ display:"flex",gap:8,marginTop:16 }}>
               <button onClick={()=>{ setForm({ ...DEFAULT_PLAN, ...p, limits: { ...DEFAULT_PLAN.limits, ...p.limits } }); setEditing(p.id); }}
-                style={{ flex:1,padding:"7px",background:"#1A1A2E",border:"1px solid #2D2D44",borderRadius:7,color:"#818CF8",fontSize:12,fontWeight:600,cursor:"pointer" }}>
+                style={{ flex:1,padding:"7px",background:"#F8FAFF",border:"1px solid #2D2D44",borderRadius:7,color:"#2563EB",fontSize:12,fontWeight:600,cursor:"pointer" }}>
                 ✏️ Editar
               </button>
               <button onClick={()=>deletePlan(p.id)}
-                style={{ padding:"7px 12px",background:"#1A1A2E",border:"1px solid #EF444422",borderRadius:7,color:"#EF4444",fontSize:12,cursor:"pointer" }}>
+                style={{ padding:"7px 12px",background:"#F8FAFF",border:"1px solid #EF444422",borderRadius:7,color:"#EF4444",fontSize:12,cursor:"pointer" }}>
                 🗑️
               </button>
             </div>
@@ -94,8 +94,8 @@ export default function PlansPage() {
       {/* Edit modal */}
       {editing && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
-          <div style={{ background:"#111118",border:"1px solid #2D2D44",borderRadius:16,padding:32,width:"100%",maxWidth:520,maxHeight:"90vh",overflowY:"auto" }}>
-            <h3 style={{ color:"#fff",margin:"0 0 24px" }}>{editing==="new"?"Nuevo Plan":"Editar Plan"}</h3>
+          <div style={{ background:"#FFFFFF",border:"1px solid #2D2D44",borderRadius:16,padding:32,width:"100%",maxWidth:520,maxHeight:"90vh",overflowY:"auto" }}>
+            <h3 style={{ color:"#0F172A",margin:"0 0 24px" }}>{editing==="new"?"Nuevo Plan":"Editar Plan"}</h3>
             {[
               ["id","ID (ej: starter)","text"],
               ["name","Nombre","text"],
@@ -107,7 +107,7 @@ export default function PlansPage() {
               <div key={k} style={{ marginBottom:14 }}>
                 <label style={{ fontSize:12,color:"#64748B",fontWeight:600,display:"block",marginBottom:4 }}>{label}</label>
                 <input type={type} value={form[k]||""} onChange={e=>setForm(f=>({...f,[k]:type==="number"?Number(e.target.value):e.target.value}))}
-                  style={{ width:"100%",background:"#0A0A0F",border:"1px solid #2D2D44",borderRadius:7,padding:"8px 12px",color:"#E2E8F0",fontSize:13,outline:"none",boxSizing:"border-box" }} />
+                  style={{ width:"100%",background:"#F8FAFF",border:"1px solid #2D2D44",borderRadius:7,padding:"8px 12px",color:"#0F172A",fontSize:13,outline:"none",boxSizing:"border-box" }} />
               </div>
             ))}
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14 }}>
@@ -115,23 +115,23 @@ export default function PlansPage() {
                 <div key={k}>
                   <label style={{ fontSize:12,color:"#64748B",fontWeight:600,display:"block",marginBottom:4 }}>{label}</label>
                   <input type={type} value={form.limits?.[k]||0} onChange={e=>setForm(f=>({...f,limits:{...f.limits,[k]:Number(e.target.value)}}))}
-                    style={{ width:"100%",background:"#0A0A0F",border:"1px solid #2D2D44",borderRadius:7,padding:"8px 12px",color:"#E2E8F0",fontSize:13,outline:"none",boxSizing:"border-box" }} />
+                    style={{ width:"100%",background:"#F8FAFF",border:"1px solid #2D2D44",borderRadius:7,padding:"8px 12px",color:"#0F172A",fontSize:13,outline:"none",boxSizing:"border-box" }} />
                 </div>
               ))}
             </div>
             <div style={{ display:"flex",gap:16,marginBottom:20 }}>
               {[["analytics","Analytics"],["whatsapp","WhatsApp"]].map(([k,label])=>(
-                <label key={k} style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#94A3B8" }}>
+                <label key={k} style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"#64748B" }}>
                   <input type="checkbox" checked={!!form.limits?.[k]} onChange={e=>setForm(f=>({...f,limits:{...f.limits,[k]:e.target.checked}}))} />
                   {label}
                 </label>
               ))}
             </div>
             <div style={{ display:"flex",gap:10 }}>
-              <button onClick={save} disabled={saving} style={{ flex:1,padding:"10px",background:"#6366F1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer" }}>
+              <button onClick={save} disabled={saving} style={{ flex:1,padding:"10px",background:"#2563EB",border:"none",borderRadius:8,color:"#0F172A",fontSize:14,fontWeight:700,cursor:"pointer" }}>
                 {saving?"Guardando...":"Guardar Plan"}
               </button>
-              <button onClick={()=>setEditing(null)} style={{ padding:"10px 16px",background:"#1A1A2E",border:"1px solid #2D2D44",borderRadius:8,color:"#64748B",fontSize:13,cursor:"pointer" }}>
+              <button onClick={()=>setEditing(null)} style={{ padding:"10px 16px",background:"#F8FAFF",border:"1px solid #2D2D44",borderRadius:8,color:"#64748B",fontSize:13,cursor:"pointer" }}>
                 Cancelar
               </button>
             </div>
