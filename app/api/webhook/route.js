@@ -661,7 +661,7 @@ Cuando el cliente mencione cualquier servicio, evento o producto (aunque sea de 
     const imgList = kbImages.map((img, i) => {
       let line = `${i + 1}. [SEND_IMAGE:${img.id}] → ${img.name}`;
       if (img.description) line += ` | Descripción: ${img.description}`;
-      if (img.tags?.length) line += ` | Etiquetas: ${img.tags.join(", ")}`;
+      if (img.tags && img.tags.length) line += ` | Etiquetas: ${img.tags.join(", ")}`;
       if (img.preview) line += ` | ${img.preview.slice(0, 60)}`;
       return line;
     }).join("\n");
@@ -669,14 +669,14 @@ Cuando el cliente mencione cualquier servicio, evento o producto (aunque sea de 
     systemPrompt += `\n\n${"=".repeat(40)}
 IMÁGENES DISPONIBLES — COPIA EL MARCADOR EXACTO
 ${"=".repeat(40)}
-Cada imagen tiene nombre, descripción y etiquetas. Cuando el usuario pida fotos/imágenes, busca las que coincidan con su consulta por nombre, descripción o etiquetas, y envía SOLO las imágenes relevantes copiando sus marcadores EXACTAMENTE:
+Cada imagen tiene nombre, descripción y etiquetas. Busca las que coincidan con la consulta del usuario (por nombre, descripción o etiquetas) y envía SOLO las relevantes:
 ${imgList}
 
 INSTRUCCIÓN CRÍTICA — IMÁGENES:
 • Busca coincidencias por nombre, descripción O etiquetas de cada imagen.
 • Envía solo las imágenes que coincidan con lo que el usuario pide (máximo 4).
-• Si el usuario pide "fotos del mundial", envía solo las imágenes con nombre/descripción/etiqueta "mundial".
-• Si el usuario pide "todo el catálogo": incluye todos los marcadores (máximo 4).
+• Si pide "fotos del mundial", envía solo las imágenes con nombre/descripción/etiqueta "mundial".
+• Si pide "todo el catálogo": incluye todos los marcadores (máximo 4).
 • Copia y pega los marcadores al FINAL de tu respuesta.
 • Ejemplo correcto: "¡Aquí te muestro las fotos! 📸 [SEND_IMAGE:${exampleId}]"
 • NUNCA digas que no puedes enviar imágenes. SIEMPRE puedes copiando el marcador.
@@ -863,4 +863,20 @@ async function sendWhatsAppImage(to, imageId, imageName, config, userId) {
 
     const sendRes = await fetch(`https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.acces
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.accessToken}` },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to,
+        type: "image",
+        image: { id: uploadData.id, caption: imageName || "" },
+      }),
+    });
+    if (!sendRes.ok) {
+      const errData = await sendRes.json();
+      console.error("❌ Error sending image:", JSON.stringify(errData));
+    }
+  } catch (err) {
+    console.error("❌ sendWhatsAppImage error:", err.message);
+  }
+}
