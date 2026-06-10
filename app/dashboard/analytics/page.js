@@ -49,6 +49,7 @@ export default function AnalyticsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const fetchData = useCallback(() => {
     fetch("/api/analytics")
@@ -84,7 +85,8 @@ export default function AnalyticsPage() {
     .map(([name, count]) => ({ name, count, pct: Math.round((count / recentMessages.length) * 100) || 0 }));
 
   const clearAnalytics = async () => {
-    if (!confirm("¿Borrar todo el historial de analytics? Esto no se puede deshacer.")) return;
+    if (!confirmClear) { setConfirmClear(true); setTimeout(() => setConfirmClear(false), 4000); return; }
+    setConfirmClear(false);
     await fetch("/api/analytics", { method: "DELETE" });
     fetchData();
   };
@@ -100,7 +102,9 @@ export default function AnalyticsPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={fetchData} style={{ padding: "8px 16px", background: WHITE, border: "1.5px solid #E2E8F0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: MUTED, cursor: "pointer" }}>↻ Actualizar</button>
-          <button onClick={clearAnalytics} style={{ padding: "8px 16px", background: "#FEF2F2", border: "1.5px solid #FCA5A5", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#DC2626", cursor: "pointer" }}>🗑️ Limpiar historial</button>
+          <button onClick={clearAnalytics} style={{ padding: "8px 16px", background: confirmClear ? "#DC2626" : "#FEF2F2", border: confirmClear ? "1.5px solid #DC2626" : "1.5px solid #FCA5A5", borderRadius: 10, fontSize: 13, fontWeight: 600, color: confirmClear ? "#FFFFFF" : "#DC2626", cursor: "pointer", transition: "all 0.2s" }}>
+            {confirmClear ? "¿Confirmar? Haz clic de nuevo" : "🗑️ Limpiar historial"}
+          </button>
         </div>
       </div>
 

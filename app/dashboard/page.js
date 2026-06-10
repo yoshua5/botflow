@@ -205,7 +205,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const h = new Date().getHours();
     setGreeting(h < 12 ? "Buenos dias" : h < 18 ? "Buenas tardes" : "Buenas noches");
-    fetch("/api/bots").then(r => r.json()).then(d => { setBots(Array.isArray(d) ? d : []); setLoading(false); }).catch(() => setLoading(false));
+    fetch("/api/bots").then(r => r.json()).then(d => { setBots(Array.isArray(d?.bots) ? d.bots : Array.isArray(d) ? d : []); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   const totalMsgs  = bots.reduce((s, b) => s + (b.messageCount || 0), 0);
