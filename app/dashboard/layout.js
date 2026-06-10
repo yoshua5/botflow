@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 
@@ -287,7 +287,7 @@ function Sidebar({ collapsed }) {
         {isSuperAdmin && (
           <div style={{ marginTop: 8 }}>
             {!collapsed && <div style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.1em", padding: "6px 12px 4px", textTransform: "uppercase" }}>ADMIN</div>}
-            <NavItem icon="👑" label="Super Admin" href="/dashboard/admin" active={pathname === "/dashboard/admin"} collapsed={collapsed} />
+            <NavItem icon="👑" label="Super Admin" href="/dashboard/super-admin" active={pathname.startsWith("/dashboard/super-admin")} collapsed={collapsed} />
           </div>
         )}
       </nav>
@@ -328,6 +328,87 @@ function Sidebar({ collapsed }) {
 }
 
 // ── Top Bar ───────────────────────────────────────────────
+// ── Notification Bell ────────────────────────────────────
+function NotificationBell() {
+  const [open, setOpen]         = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unread, setUnread]     = useState(0);
+  const ref = useRef(null);
+
+  const fetchNotifs = useCallback(async () => {
+    try {
+      const r = await fetch("/api/admin/notifications");
+      if (!r.ok) return;
+      const d = await r.json();
+      setNotifications(d.notifications || []);
+      setUnread(d.unread || 0);
+    } catch {}
+  }, []);
+
+  useEffect(() => { fetchNotifs(); const t = setInterval(fetchNotifs, 30000); return () => clearInterval(t); }, [fetchNotifs]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const markAllRead = async () => {
+    await fetch("/api/admin/notifications", { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ markAllRead: true }) });
+    fetchNotifs();
+  };
+
+  const TYPE_COLORS = { info:"#6366F1", update:"#22C55E", important:"#F59E0B", critical:"#EF4444" };
+
+  return (
+    <div ref={ref} style={{ position:"relative" }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width: 36, height: 36, borderRadius: 8, background: T.white, border: `1.5px solid ${T.border}`,
+        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, position: "relative",
+        transition: "all 0.15s",
+      }}
+        onMouseEnter={e => { e.currentTarget.style.background = T.blueL; e.currentTarget.style.borderColor = "#93C5FD"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = T.white; e.currentTarget.style.borderColor = T.border; }}>
+        🔔
+        {unread > 0 && (
+          <span style={{ position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",background:"#EF4444",border:"2px solid white",fontSize:9,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center" }}>
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div style={{ position:"absolute",top:"calc(100% + 8px)",right:0,width:340,background:"#fff",border:"1px solid #E2E8F0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,.12)",zIndex:200,overflow:"hidden" }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:"1px solid #F1F5F9" }}>
+            <div style={{ fontWeight:700,fontSize:14,color:"#0F172A" }}>Notificaciones</div>
+            {unread > 0 && <button onClick={markAllRead} style={{ fontSize:11,color:"#2563EB",background:"none",border:"none",cursor:"pointer",fontWeight:600 }}>Marcar todo leído</button>}
+          </div>
+          {notifications.length === 0 && (
+            <div style={{ padding:32,textAlign:"center",color:"#94A3B8",fontSize:13 }}>
+              <div style={{ fontSize:32,marginBottom:8 }}>🔔</div>
+              Sin notificaciones
+            </div>
+          )}
+          <div style={{ maxHeight:320,overflowY:"auto" }}>
+            {notifications.map(n => (
+              <div key={n.id} style={{ padding:"12px 16px",borderBottom:"1px solid #F8FAFF",background:n.is_read?"transparent":"#F8FAFF" }}>
+                <div style={{ display:"flex",alignItems:"flex-start",gap:10 }}>
+                  <div style={{ width:8,height:8,borderRadius:"50%",background:TYPE_COLORS[n.type]||"#6366F1",marginTop:4,flexShrink:0 }} />
+                  <div>
+                    <div style={{ fontWeight:600,fontSize:13,color:"#0F172A",marginBottom:2 }}>{n.title}</div>
+                    <div style={{ fontSize:12,color:"#64748B",lineHeight:1.4 }}>{n.message}</div>
+                    <div style={{ fontSize:11,color:"#94A3B8",marginTop:4 }}>{new Date(n.created_at).toLocaleDateString("es")}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TopBar({ sidebarWidth, collapsed, setCollapsed }) {
   const { data: session } = useSession();
   const displayName = session?.user?.name || session?.user?.email?.split("@")[0] || "Usuario";
@@ -370,17 +451,8 @@ function TopBar({ sidebarWidth, collapsed, setCollapsed }) {
       </div>
 
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-        {/* Notification bell */}
-        <button style={{
-          width: 36, height: 36, borderRadius: 8, background: T.white, border: `1.5px solid ${T.border}`,
-          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, position: "relative",
-          transition: "all 0.15s",
-        }}
-          onMouseEnter={e => { e.currentTarget.style.background = T.blueL; e.currentTarget.style.borderColor = "#93C5FD"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = T.white; e.currentTarget.style.borderColor = T.border; }}>
-          🔔
-          <span style={{ position: "absolute", top: 7, right: 7, width: 7, height: 7, borderRadius: "50%", background: "#EF4444", border: "1.5px solid white" }} />
-        </button>
+        {/* Notification bell - functional */}
+        <NotificationBell />
 
         {/* User info */}
         <div style={{
