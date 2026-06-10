@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 
-// ── AgentFlow Logo SVG ────────────────────────────────────
+//  AgentFlow Logo SVG 
 function AgentLogo({ size = 36 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -25,7 +25,7 @@ function AgentLogo({ size = 36 }) {
   );
 }
 
-// ── Dynamic <title> + favicon ─────────────────────────────
+//  Dynamic <title> + favicon 
 function DynamicHead() {
   useEffect(() => {
     fetch("/api/config").then(r => r.json()).then(cfg => {
@@ -38,7 +38,7 @@ function DynamicHead() {
   return null;
 }
 
-// ── Design tokens ─────────────────────────────────────────
+//  Design tokens 
 const T = {
   blue:    "#2563EB",
   blueL:   "#EFF6FF",
@@ -53,19 +53,19 @@ const T = {
   surface: "#F1F5F9",
 };
 
-// ── Nav structure ─────────────────────────────────────────
+//  Nav structure 
 const GROUPS = [
   {
     label: "WORKSPACE",
     items: [
-      { icon: "⊞", label: "Dashboard",  href: "/dashboard" },
-      { icon: "📊", label: "Analytics",  href: "/dashboard/analytics" },
+      { icon: "", label: "Dashboard",  href: "/dashboard" },
+      { icon: "", label: "Analytics",  href: "/dashboard/analytics" },
     ],
   },
   {
-    label: "AUTOMATIZACIÓN",
+    label: "AUTOMATIZACIN",
     items: [
-      { icon: "🤖", label: "Mis Bots",   href: "/dashboard/bots" },
+      { icon: "", label: "Mis Bots",   href: "/dashboard/bots" },
     ],
     extra: "catalogos",
   },
@@ -77,35 +77,35 @@ const GROUPS = [
   {
     label: "CLIENTES",
     items: [
-      { icon: "👥", label: "Contactos",  href: "/dashboard/contactos" },
-      { icon: "📅", label: "Citas",      href: "/dashboard/citas" },
+      { icon: "", label: "Contactos",  href: "/dashboard/contactos" },
+      { icon: "", label: "Citas",      href: "/dashboard/citas" },
     ],
   },
   {
-    label: "CONFIGURACIÓN",
+    label: "CONFIGURACIN",
     items: [],
     extra: "config",
   },
 ];
 
 const CATALOGOS_CHILDREN = [
-  { icon: "🖼️", label: "Ver Catálogo",    href: "/dashboard/catalogos" },
-  { icon: "📤", label: "Subir Contenido", href: "/dashboard/catalogos/contenido" },
-  { icon: "🌐", label: "Desde Sitio Web", href: "/dashboard/catalogos/sitio-web" },
+  { icon: "", label: "Ver Catlogo",    href: "/dashboard/catalogos" },
+  { icon: "", label: "Subir Contenido", href: "/dashboard/catalogos/contenido" },
+  { icon: "", label: "Desde Sitio Web", href: "/dashboard/catalogos/sitio-web" },
 ];
 
 const TIENDA_CHILDREN = [
-  { icon: "🏪", label: "Mis Productos", href: "/dashboard/tienda" },
-  { icon: "💳", label: "Pagos",         href: "/dashboard/pagos" },
+  { icon: "", label: "Mis Productos", href: "/dashboard/tienda" },
+  { icon: "", label: "Pagos",         href: "/dashboard/pagos" },
 ];
 
 const CONFIG_CHILDREN = [
-  { icon: "👤", label: "Cuenta",      href: "/dashboard/configuracion/cuenta" },
-  { icon: "🔌", label: "Conexiones",  href: "/dashboard/configuracion/conexiones" },
-  { icon: "🤖", label: "Agentes",     href: "/dashboard/configuracion/agentes" },
+  { icon: "", label: "Cuenta",      href: "/dashboard/configuracion/cuenta" },
+  { icon: "", label: "Conexiones",  href: "/dashboard/configuracion/conexiones" },
+  { icon: "", label: "Agentes",     href: "/dashboard/configuracion/agentes" },
 ];
 
-// ── Nav Item ──────────────────────────────────────────────
+//  Nav Item 
 function NavItem({ icon, label, href, active, collapsed, depth = 0 }) {
   return (
     <a href={href} style={{
@@ -131,7 +131,7 @@ function NavItem({ icon, label, href, active, collapsed, depth = 0 }) {
   );
 }
 
-// ── Sidebar ───────────────────────────────────────────────
+//  Sidebar 
 function Sidebar({ collapsed }) {
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -166,7 +166,7 @@ function Sidebar({ collapsed }) {
       overflow: "hidden",
     }}>
 
-      {/* ── Logo ── */}
+      {/*  Logo  */}
       <div style={{ padding: "16px 12px 12px", borderBottom: `1px solid ${T.surface}` }}>
         <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flexShrink: 0 }}><AgentLogo size={36} /></div>
@@ -189,7 +189,7 @@ function Sidebar({ collapsed }) {
         </a>
       </div>
 
-      {/* ── Create New Bot CTA ── */}
+      {/*  Create New Bot CTA  */}
       <div style={{ padding: "10px 10px 0" }}>
         <a href="/dashboard/create" style={{
           display: "flex", alignItems: "center", gap: 8,
@@ -207,7 +207,7 @@ function Sidebar({ collapsed }) {
         </a>
       </div>
 
-      {/* ── Nav groups ── */}
+      {/*  Nav groups  */}
       <nav style={{ flex: 1, padding: "8px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
         {GROUPS.map((group, gi) => (
           <div key={gi} style={{ marginTop: gi > 0 ? 8 : 4 }}>
@@ -227,7 +227,7 @@ function Sidebar({ collapsed }) {
               );
             })}
 
-            {/* Catálogos dropdown */}
+            {/* Catlogos dropdown */}
             {group.extra === "catalogos" && (
               <div>
                 <button onClick={() => setCatalogosOpen(o => !o)} style={{
@@ -243,15 +243,48 @@ function Sidebar({ collapsed }) {
                 }}
                   onMouseEnter={e => { if (!isCatalogosActive) { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = T.text; } }}
                   onMouseLeave={e => { if (!isCatalogosActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.muted; } }}>
-                  <span style={{ fontSize: 16, flexShrink: 0 }}>📂</span>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}></span>
                   {!collapsed && <>
-                    <span style={{ flex: 1, textAlign: "left" }}>Catálogos</span>
-                    <span style={{ fontSize: 10, transition: "transform 0.2s", transform: catalogosOpen ? "rotate(180deg)" : "none", color: "#94A3B8" }}>▾</span>
+                    <span style={{ flex: 1, textAlign: "left" }}>Catlogos</span>
+                    <span style={{ fontSize: 10, transition: "transform 0.2s", transform: catalogosOpen ? "rotate(180deg)" : "none", color: "#94A3B8" }}></span>
                   </>}
                 </button>
                 {catalogosOpen && !collapsed && (
                   <div style={{ paddingLeft: 8, marginTop: 2 }}>
                     {CATALOGOS_CHILDREN.map(child => {
+                      const a = pathname === child.href || pathname.startsWith(child.href + "/");
+                      return <NavItem key={child.href} {...child} active={a} collapsed={false} depth={1} />;
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tienda dropdown */}
+            {group.extra === "tienda" && (
+              <div>
+                <button onClick={() => setTiendaOpen(o => !o)} style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%",
+                  padding: collapsed ? "9px 14px" : "9px 12px",
+                  borderRadius: 8, border: "none", cursor: "pointer",
+                  background: isTiendaActive ? T.blueL : "transparent",
+                  color: isTiendaActive ? T.blue : T.muted,
+                  fontWeight: isTiendaActive ? 700 : 500,
+                  fontSize: 14, transition: "all 0.12s",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                  borderLeft: isTiendaActive && !collapsed ? `3px solid ${T.blue}` : "3px solid transparent",
+                }}
+                  onMouseEnter={e => { if (!isTiendaActive) { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = T.text; } }}
+                  onMouseLeave={e => { if (!isTiendaActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.muted; } }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}></span>
+                  {!collapsed && <>
+                    <span style={{ flex: 1, textAlign: "left" }}>Tienda</span>
+                    <span style={{ fontSize: 10, transition: "transform 0.2s", transform: tiendaOpen ? "rotate(180deg)" : "none", color: "#94A3B8" }}></span>
+                  </>}
+                </button>
+                {tiendaOpen && !collapsed && (
+                  <div style={{ paddingLeft: 8, marginTop: 2 }}>
+                    {TIENDA_CHILDREN.map(child => {
                       const a = pathname === child.href || pathname.startsWith(child.href + "/");
                       return <NavItem key={child.href} {...child} active={a} collapsed={false} depth={1} />;
                     })}
@@ -276,10 +309,10 @@ function Sidebar({ collapsed }) {
                 }}
                   onMouseEnter={e => { if (!isConfigActive) { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = T.text; } }}
                   onMouseLeave={e => { if (!isConfigActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.muted; } }}>
-                  <span style={{ fontSize: 16, flexShrink: 0 }}>⚙️</span>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}></span>
                   {!collapsed && <>
-                    <span style={{ flex: 1, textAlign: "left" }}>Configuración</span>
-                    <span style={{ fontSize: 10, transition: "transform 0.2s", transform: configOpen ? "rotate(180deg)" : "none", color: "#94A3B8" }}>▾</span>
+                    <span style={{ flex: 1, textAlign: "left" }}>Configuracin</span>
+                    <span style={{ fontSize: 10, transition: "transform 0.2s", transform: configOpen ? "rotate(180deg)" : "none", color: "#94A3B8" }}></span>
                   </>}
                 </button>
                 {configOpen && !collapsed && (
@@ -299,14 +332,14 @@ function Sidebar({ collapsed }) {
         {isSuperAdmin && (
           <div style={{ marginTop: 8 }}>
             {!collapsed && <div style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.1em", padding: "6px 12px 4px", textTransform: "uppercase" }}>ADMIN</div>}
-            <NavItem icon="👑" label="Super Admin" href="/dashboard/super-admin" active={pathname.startsWith("/dashboard/super-admin")} collapsed={collapsed} />
+            <NavItem icon="" label="Super Admin" href="/dashboard/super-admin" active={pathname.startsWith("/dashboard/super-admin")} collapsed={collapsed} />
           </div>
         )}
       </nav>
 
-      {/* ── Bottom: help + account ── */}
+      {/*  Bottom: help + account  */}
       <div style={{ padding: "8px 8px 12px", borderTop: `1px solid ${T.surface}` }}>
-        <NavItem icon="❓" label="Ayuda" href="#" active={false} collapsed={collapsed} />
+        <NavItem icon="" label="Ayuda" href="#" active={false} collapsed={collapsed} />
         <div style={{ height: 1, background: T.surface, margin: "4px 4px" }} />
         <div style={{
           display: "flex", alignItems: "center", gap: 8,
@@ -315,7 +348,7 @@ function Sidebar({ collapsed }) {
           justifyContent: collapsed ? "center" : "flex-start",
         }}
           onClick={() => signOut({ callbackUrl: "/sign-in" })}
-          title="Cerrar sesión"
+          title="Cerrar sesin"
           onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
           <div style={{
@@ -330,7 +363,7 @@ function Sidebar({ collapsed }) {
               <div style={{ fontSize: 12, fontWeight: 600, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {session?.user?.name || email.split("@")[0]}
               </div>
-              <div style={{ fontSize: 10, color: "#EF4444", fontWeight: 600 }}>Cerrar sesión</div>
+              <div style={{ fontSize: 10, color: "#EF4444", fontWeight: 600 }}>Cerrar sesin</div>
             </div>
           )}
         </div>
@@ -339,8 +372,8 @@ function Sidebar({ collapsed }) {
   );
 }
 
-// ── Top Bar ───────────────────────────────────────────────
-// ── Notification Bell ────────────────────────────────────
+//  Top Bar 
+//  Notification Bell 
 function NotificationBell() {
   const [open, setOpen]         = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -382,7 +415,7 @@ function NotificationBell() {
       }}
         onMouseEnter={e => { e.currentTarget.style.background = T.blueL; e.currentTarget.style.borderColor = "#93C5FD"; }}
         onMouseLeave={e => { e.currentTarget.style.background = T.white; e.currentTarget.style.borderColor = T.border; }}>
-        🔔
+        
         {unread > 0 && (
           <span style={{ position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:"50%",background:"#EF4444",border:"2px solid white",fontSize:9,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center" }}>
             {unread > 9 ? "9+" : unread}
@@ -393,11 +426,11 @@ function NotificationBell() {
         <div style={{ position:"absolute",top:"calc(100% + 8px)",right:0,width:340,background:"#fff",border:"1px solid #E2E8F0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,.12)",zIndex:200,overflow:"hidden" }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:"1px solid #F1F5F9" }}>
             <div style={{ fontWeight:700,fontSize:14,color:"#0F172A" }}>Notificaciones</div>
-            {unread > 0 && <button onClick={markAllRead} style={{ fontSize:11,color:"#2563EB",background:"none",border:"none",cursor:"pointer",fontWeight:600 }}>Marcar todo leído</button>}
+            {unread > 0 && <button onClick={markAllRead} style={{ fontSize:11,color:"#2563EB",background:"none",border:"none",cursor:"pointer",fontWeight:600 }}>Marcar todo ledo</button>}
           </div>
           {notifications.length === 0 && (
             <div style={{ padding:32,textAlign:"center",color:"#94A3B8",fontSize:13 }}>
-              <div style={{ fontSize:32,marginBottom:8 }}>🔔</div>
+              <div style={{ fontSize:32,marginBottom:8 }}></div>
               Sin notificaciones
             </div>
           )}
@@ -443,12 +476,12 @@ function TopBar({ sidebarWidth, collapsed, setCollapsed }) {
         onMouseEnter={e => { e.currentTarget.style.background = T.blueL; e.currentTarget.style.borderColor = "#93C5FD"; }}
         onMouseLeave={e => { e.currentTarget.style.background = T.white; e.currentTarget.style.borderColor = T.border; }}
         title={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}>
-        {collapsed ? "☰" : "☰"}
+        {collapsed ? "" : ""}
       </button>
 
       {/* Search */}
       <div style={{ flex: 1, maxWidth: 420, position: "relative" }}>
-        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#94A3B8", pointerEvents: "none" }}>🔍</span>
+        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#94A3B8", pointerEvents: "none" }}></span>
         <input
           placeholder="Buscar bots, contactos, actividad..."
           style={{
@@ -489,10 +522,10 @@ function TopBar({ sidebarWidth, collapsed, setCollapsed }) {
   );
 }
 
-// ── Chat Widget ───────────────────────────────────────────
+//  Chat Widget 
 function ChatWidget() {
   const [open, setOpen]           = useState(false);
-  const [messages, setMessages]   = useState([{ role: "bot", text: "¡Hola! Soy tu agente virtual. Escríbeme algo para ver cómo respondo. 👋" }]);
+  const [messages, setMessages]   = useState([{ role: "bot", text: "Hola! Soy tu agente virtual. Escrbeme algo para ver cmo respondo. " }]);
   const [input, setInput]         = useState("");
   const [loading, setLoading]     = useState(false);
   const [listening, setListening] = useState(false);
@@ -512,7 +545,7 @@ function ChatWidget() {
       const data = await res.json();
       setMessages(m => [...m, { role: "bot", text: data.reply || "Sin respuesta." }]);
     } catch {
-      setMessages(m => [...m, { role: "bot", text: "❌ Error al conectar." }]);
+      setMessages(m => [...m, { role: "bot", text: " Error al conectar." }]);
     }
     setLoading(false);
   };
@@ -543,7 +576,7 @@ function ChatWidget() {
         onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
         onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
         title="Probar agente">
-        {open ? "✕" : "💬"}
+        {open ? "" : ""}
       </button>
 
       {open && (
@@ -555,7 +588,7 @@ function ChatWidget() {
           animation: "chatIn 0.18s ease",
         }}>
           <div style={{ background: T.blue, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}></div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: T.white }}>Chat de Prueba</div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)" }}>Respuestas reales con IA</div>
@@ -577,9 +610,9 @@ function ChatWidget() {
             {loading && (
               <div style={{ display: "flex" }}>
                 <div style={{ padding: "10px 14px", background: T.surface, borderRadius: "14px 14px 14px 4px", fontSize: 18 }}>
-                  <span style={{ animation: "pulse 1s infinite" }}>●</span>
-                  <span style={{ animation: "pulse 1s infinite 0.2s" }}>●</span>
-                  <span style={{ animation: "pulse 1s infinite 0.4s" }}>●</span>
+                  <span style={{ animation: "pulse 1s infinite" }}></span>
+                  <span style={{ animation: "pulse 1s infinite 0.2s" }}></span>
+                  <span style={{ animation: "pulse 1s infinite 0.4s" }}></span>
                 </div>
               </div>
             )}
@@ -600,48 +633,4 @@ function ChatWidget() {
               onBlur={e => { e.target.style.borderColor = T.border; e.target.style.background = T.surface; }}
             />
             <button onClick={startVoice} style={{
-              width: 36, height: 36, borderRadius: 9, border: `1.5px solid ${T.border}`,
-              background: listening ? "#FEF2F2" : T.white, cursor: "pointer", fontSize: 16,
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }} title="Entrada de voz">
-              {listening ? "\u23F9" : "\uD83C\uDFA4"}
-            </button>
-            <button onClick={() => send(input)} disabled={loading || !input.trim()} style={{
-              width: 36, height: 36, borderRadius: 9, background: T.blue, border: "none",
-              cursor: loading || !input.trim() ? "not-allowed" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              opacity: loading || !input.trim() ? 0.5 : 1, flexShrink: 0,
-            }}>
-              <span style={{ color: T.white, fontSize: 14 }}>{"\u27A4"}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes chatIn { from { opacity:0; transform:translateY(12px) scale(0.97) } to { opacity:1; transform:none } }
-        @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
-      `}</style>
-    </>
-  );
-}
-
-// ── Dashboard Layout ──────────────────────────────────────
-export default function DashboardLayout({ children }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const sidebarWidth = collapsed ? 64 : 240;
-
-  return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFF", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <DynamicHead />
-      <Sidebar collapsed={collapsed} />
-      <div style={{ flex: 1, marginLeft: sidebarWidth, transition: "margin-left 0.22s ease" }}>
-        <TopBar sidebarWidth={sidebarWidth} collapsed={collapsed} setCollapsed={setCollapsed} />
-        <main style={{ marginTop: 60, minHeight: "calc(100vh - 60px)" }}>
-          {children}
-        </main>
-      </div>
-      <ChatWidget />
-    </div>
-  );
-}
+              width: 36, height: 36,
