@@ -214,3 +214,4 @@ export default function PagosPage() {
       )}
     </div>
   );
+}
