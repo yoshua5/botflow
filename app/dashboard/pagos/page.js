@@ -141,7 +141,7 @@ export default function PagosPage() {
         {TABS.map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)}
             style={{ padding:"7px 18px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
-              background:tab===k?WH:transparent,color:tab===k?TX:MT,boxShadow:tab===k?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s" }}>
+              background:tab===k?WH:"transparent",color:tab===k?TX:MT,boxShadow:tab===k?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s" }}>
             {l}
           </button>
         ))}
@@ -214,4 +214,3 @@ export default function PagosPage() {
       )}
     </div>
   );
-}
