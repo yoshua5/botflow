@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useBotContext } from "@/lib/bot-context";
 
 const BL="#2563EB",BLL="#EFF6FF",TX="#0F172A",MT="#64748B",WH="#FFFFFF",BD="#E2E8F0",BG="#F8FAFF";
 const STATUS_CFG = {
@@ -48,6 +49,7 @@ function FieldRow({field,idx,total,onChange,onDelete,onMove}){
 }
 
 export default function CitasPage(){
+  const { selectedBot } = useBotContext();
   const today=new Date();
   const [yr,setYr]=useState(today.getFullYear());
   const [mo,setMo]=useState(today.getMonth());
@@ -74,15 +76,18 @@ export default function CitasPage(){
   const [cancelModal,setCancelModal]=useState(null);
   const [notifying,setNotifying]=useState(null);
 
-  useEffect(()=>{
-    fetch("/api/citas/fields").then(r=>r.json()).then(d=>{setFields(d.fields||[]);setLoadingF(false);}).catch(()=>setLoadingF(false));
-    fetch("/api/citas/config").then(r=>r.json()).then(d=>{if(d.config)setAvail(d.config);}).catch(()=>{});
-    loadAppointments();
-  },[]);
+  const botQs = selectedBot ? `?bot_id=${selectedBot.id}` : "";
 
-  async function loadAppointments(){
+  useEffect(()=>{
+    const bq = selectedBot ? `?bot_id=${selectedBot.id}` : "";
+    fetch(`/api/citas/fields${bq}`).then(r=>r.json()).then(d=>{setFields(d.fields||[]);setLoadingF(false);}).catch(()=>setLoadingF(false));
+    fetch(`/api/citas/config${bq}`).then(r=>r.json()).then(d=>{if(d.config)setAvail(d.config);}).catch(()=>{});
+    loadAppointments(selectedBot?.id);
+  },[selectedBot]);
+
+  async function loadAppointments(botId){
     setLoadingAppts(true);
-    try{const r=await fetch("/api/citas");const d=await r.json();setAppointments(d.appointments||[]);}catch{}
+    try{const bq=botId?`?bot_id=${botId}`:"";const r=await fetch(`/api/citas${bq}`);const d=await r.json();setAppointments(d.appointments||[]);}catch{}
     setLoadingAppts(false);
   }
 
@@ -116,9 +121,9 @@ export default function CitasPage(){
   function deleteField(idx){setFields(prev=>prev.filter((_,i)=>i!==idx));setSavedF(false);}
   function moveField(idx,dir){const n=[...fields],t=idx+dir;if(t<0||t>=n.length)return;[n[idx],n[t]]=[n[t],n[idx]];setFields(n);setSavedF(false);}
 
-  async function saveFields(){setSavingF(true);setSavedF(false);try{const r=await fetch("/api/citas/fields",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});const d=await r.json();if(r.ok){setSavedF(true);}else{alert("Error: "+d.error);}}catch(e){alert("Error: "+e.message);}setSavingF(false);}
+  async function saveFields(){setSavingF(true);setSavedF(false);try{const r=await fetch("/api/citas/fields",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields, bot_id: selectedBot?.id || null})});const d=await r.json();if(r.ok){setSavedF(true);}else{alert("Error: "+d.error);}}catch(e){alert("Error: "+e.message);}setSavingF(false);}
   function toggleDay(d){setAvail(a=>({...a,available_days:a.available_days.includes(d)?a.available_days.filter(x=>x!==d):[...a.available_days,d].sort()}));setSavedA(false);}
-  async function saveAvail(){setSavingA(true);setSavedA(false);try{const r=await fetch("/api/citas/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(avail)});if(r.ok)setSavedA(true);else{const d=await r.json();alert("Error: "+d.error);}}catch(e){alert("Error: "+e.message);}setSavingA(false);}
+  async function saveAvail(){setSavingA(true);setSavedA(false);try{const r=await fetch("/api/citas/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...avail, bot_id: selectedBot?.id || null})});if(r.ok)setSavedA(true);else{const d=await r.json();alert("Error: "+d.error);}}catch(e){alert("Error: "+e.message);}setSavingA(false);}
 
   async function updateStatus(id,status,cancel_reason){
     if(status==="cancelada"&&!cancel_reason){setCancelModal({id,reason:""});return;}

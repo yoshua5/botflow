@@ -7,20 +7,21 @@ function db() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// GET: list all fields for this user
-export async function GET() {
+export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data, error } = await db()
-      .from("appointment_fields")
-      .select("*")
-      .eq("user_id", userId)
-      .order("field_order", { ascending: true });
+    const { searchParams } = new URL(req.url);
+    const botId = searchParams.get("bot_id");
 
-    if (error) throw error;
+    let query = db().from("appointment_fields").select("*").eq("user_id", userId);
+    if (botId) query = query.eq("bot_id", botId);
+    else query = query.is("bot_id", null);
+    query = query.order("field_order", { ascending: true });
+
+    const { data } = await query;
     if (!data || data.length === 0) return NextResponse.json({ fields: getDefaultFields() });
     return NextResponse.json({ fields: data });
   } catch (err) {
@@ -29,22 +30,25 @@ export async function GET() {
   }
 }
 
-// POST: save full field list (replace all)
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { fields } = await request.json();
+    const { fields, bot_id } = await request.json();
     if (!Array.isArray(fields)) return NextResponse.json({ error: "fields must be array" }, { status: 400 });
 
     const supabase = db();
-    await supabase.from("appointment_fields").delete().eq("user_id", userId);
+    let del = supabase.from("appointment_fields").delete().eq("user_id", userId);
+    if (bot_id) del = del.eq("bot_id", bot_id);
+    else del = del.is("bot_id", null);
+    await del;
 
     if (fields.length > 0) {
       const rows = fields.map((f, i) => ({
         user_id:     userId,
+        bot_id:      bot_id || null,
         field_key:   f.field_key || `field_${i}`,
         field_label: f.field_label || `Campo ${i + 1}`,
         question:    f.question   || `¿Cuál es tu ${f.field_label || "dato"}?`,
@@ -64,10 +68,10 @@ export async function POST(request) {
 
 function getDefaultFields() {
   return [
-    { id: "d1", field_key: "nombre",   field_label: "Nombre completo",   question: "¿Cuál es tu nombre completo?",          field_order: 0, required: true },
-    { id: "d2", field_key: "telefono", field_label: "Teléfono",          question: "¿Cuál es tu número de teléfono?",       field_order: 1, required: true },
-    { id: "d3", field_key: "fecha_deseada", field_label: "Fecha deseada",     question: "¿Qué fecha te gustaría para la cita?",  field_order: 2, required: true },
-    { id: "d4", field_key: "hora_deseada",  field_label: "Hora deseada",      question: "¿A qué hora te gustaría la cita?",      field_order: 3, required: true },
-    { id: "d5", field_key: "motivo",   field_label: "Motivo de la cita", question: "¿Cuál es el motivo de la cita?",       field_order: 4, required: false },
+    { id: "d1", field_key: "nombre",        field_label: "Nombre completo",   question: "¿Cuál es tu nombre completo?",         field_order: 0, required: true },
+    { id: "d2", field_key: "telefono",       field_label: "Teléfono",          question: "¿Cuál es tu número de teléfono?",      field_order: 1, required: true },
+    { id: "d3", field_key: "fecha_deseada",  field_label: "Fecha deseada",     question: "¿Qué fecha te gustaría para la cita?", field_order: 2, required: true },
+    { id: "d4", field_key: "hora_deseada",   field_label: "Hora deseada",      question: "¿A qué hora te gustaría la cita?",     field_order: 3, required: true },
+    { id: "d5", field_key: "motivo",         field_label: "Motivo de la cita", question: "¿Cuál es el motivo de la cita?",      field_order: 4, required: false },
   ];
 }

@@ -1,6 +1,7 @@
 
 "use client";
 import { useState, useEffect } from "react";
+import { useBotContext } from "@/lib/bot-context";
 
 const BL="#2563EB",BLL="#EFF6FF",TX="#0F172A",MT="#64748B",WH="#FFFFFF",BD="#E2E8F0",GR="#10B981",RD="#EF4444",AM="#F59E0B";
 
@@ -80,6 +81,7 @@ function ConnectCard({ connect, onOnboard, onDashboard, loading }) {
 }
 
 export default function PagosPage() {
+  const { selectedBot } = useBotContext();
   const [connect, setConnect]   = useState(null);
   const [orders,  setOrders]    = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -92,12 +94,13 @@ export default function PagosPage() {
     if (p.get("connected")) window.history.replaceState({}, "", "/dashboard/pagos");
     if (p.get("refresh")) window.history.replaceState({}, "", "/dashboard/pagos");
     loadAll();
-  },[]);
+  },[selectedBot]);
 
   async function loadAll() {
     setLoading(true);
+    const bq = selectedBot ? `?bot_id=${selectedBot.id}` : "";
     const [cs, or] = await Promise.all([
-      fetch("/api/stripe/connect/status").then(r=>r.json()).catch(()=>({})),
+      fetch(`/api/stripe/connect/status${bq}`).then(r=>r.json()).catch(()=>({})),
       fetch("/api/catalog/orders").then(r=>r.json()).catch(()=>({})),
     ]);
     setConnect(cs.connected ? cs : null);
@@ -107,7 +110,7 @@ export default function PagosPage() {
 
   async function handleOnboard() {
     setOnboarding(true);
-    const r = await fetch("/api/stripe/connect/onboard", { method:"POST" });
+    const r = await fetch("/api/stripe/connect/onboard", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ bot_id: selectedBot?.id || null }) });
     const d = await r.json();
     setOnboarding(false);
     if (d.url) window.location.href = d.url;
@@ -116,7 +119,7 @@ export default function PagosPage() {
 
   async function handleDashboard() {
     setOnboarding(true);
-    const r = await fetch("/api/stripe/connect/dashboard", { method:"POST" });
+    const r = await fetch("/api/stripe/connect/dashboard", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ bot_id: selectedBot?.id || null }) });
     const d = await r.json();
     setOnboarding(false);
     if (d.url) window.open(d.url, "_blank");

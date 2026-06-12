@@ -507,7 +507,9 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
       // Build confirmation message with availability info if set
       let confirmMsg = "¡Perfecto! Tu cita ha sido registrada exitosamente ✅\n\nTe confirmaremos pronto. ¡Gracias! 😊";
       try {
-        const { data: availCfg } = await db.from("appointment_config").select("*").eq("user_id", userId).maybeSingle();
+        let cfgQ = db.from("appointment_config").select("*").eq("user_id", userId);
+        if (botId) cfgQ = cfgQ.eq("bot_id", botId); else cfgQ = cfgQ.is("bot_id", null);
+        const { data: availCfg } = await cfgQ.maybeSingle();
         if (availCfg) {
           const DAY_NAMES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
           const days = (availCfg.available_days || []).map(d => DAY_NAMES[d]).join(", ");
@@ -524,18 +526,20 @@ async function handleAppointmentFlow(text, from, userId, botId, contactName, con
   // ── Intent detection ────────────────────────────────────────────────
   if (APPT_INTENT.test(text)) {
     // Load fields from DB, fall back to defaults if none configured
-    const { data: fieldsData } = await db
-      .from("appointment_fields")
+    let fq = db.from("appointment_fields")
       .select("field_key, field_label, question, field_order, required")
-      .eq("user_id", userId)
-      .order("field_order", { ascending: true });
+      .eq("user_id", userId);
+    if (botId) fq = fq.eq("bot_id", botId); else fq = fq.is("bot_id", null);
+    const { data: fieldsData } = await fq.order("field_order", { ascending: true });
 
     const fields = (fieldsData && fieldsData.length > 0) ? fieldsData : DEFAULT_FIELDS;
 
     // Load availability config to show date/time options
     let availCfg = null;
     try {
-      const { data: ac } = await db.from("appointment_config").select("*").eq("user_id", userId).maybeSingle();
+      let acQ = db.from("appointment_config").select("*").eq("user_id", userId);
+      if (botId) acQ = acQ.eq("bot_id", botId); else acQ = acQ.is("bot_id", null);
+      const { data: ac } = await acQ.maybeSingle();
       availCfg = ac || null;
     } catch (_) {}
 

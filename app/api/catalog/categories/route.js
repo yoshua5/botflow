@@ -10,12 +10,15 @@ async function uid(req) {
   return s.user.id;
 }
 
-export async function GET() {
+export async function GET(req) {
   const userId = await uid();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { searchParams } = new URL(req.url);
+  const botId = searchParams.get("bot_id");
   const db = supabase();
-  const { data, error } = await db.from("catalog_categories")
-    .select("*").eq("user_id", userId).order("sort_order").order("name");
+  let q = db.from("catalog_categories").select("*").eq("user_id", userId);
+  if (botId) q = q.eq("bot_id", botId); else q = q.is("bot_id", null);
+  const { data, error } = await q.order("sort_order").order("name");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ categories: data || [] });
 }

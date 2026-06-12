@@ -5,15 +5,18 @@ import { authOptions } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import Stripe from "stripe";
 
-export async function GET() {
+export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const db = supabase();
-    const { data: connect } = await db.from("stripe_connect_accounts")
-      .select("*").eq("user_id", userId).single();
+    const { searchParams } = new URL(req.url);
+    const botId = searchParams.get("bot_id");
+    let scq = db.from("stripe_connect_accounts").select("*").eq("user_id", userId);
+    if (botId) scq = scq.eq("bot_id", botId); else scq = scq.is("bot_id", null);
+    const { data: connect } = await scq.single();
 
     if (!connect) return NextResponse.json({ connected: false });
 
@@ -26,13 +29,15 @@ export async function GET() {
       : account.details_submitted ? "restricted"
       : "pending";
 
-    await db.from("stripe_connect_accounts").update({
+    let uq = db.from("stripe_connect_accounts").update({
       charges_enabled:  account.charges_enabled,
       payouts_enabled:  account.payouts_enabled,
       details_submitted: account.details_submitted,
       status,
       updated_at: new Date().toISOString(),
     }).eq("user_id", userId);
+    if (botId) uq = uq.eq("bot_id", botId); else uq = uq.is("bot_id", null);
+    await uq;
 
     return NextResponse.json({
       connected: true,

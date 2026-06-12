@@ -20,10 +20,12 @@ export async function GET(req) {
   const q          = searchParams.get("q");
 
   const db = supabase();
+  const botId = searchParams.get("bot_id");
   let query = db.from("catalog_items")
     .select("*, catalog_categories(name, icon)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .eq("user_id", userId);
+  if (botId) query = query.eq("bot_id", botId); else query = query.is("bot_id", null);
+  query = query.order("created_at", { ascending: false });
 
   if (categoryId) query = query.eq("category_id", categoryId);
   if (type)       query = query.eq("type", type);
@@ -53,6 +55,7 @@ export async function POST(req) {
   const db = supabase();
   const { data, error } = await db.from("catalog_items").insert({
     user_id: userId,
+    bot_id: body.bot_id || null,
     name, description,
     price: price ? parseFloat(price) : null,
     currency: currency || "MXN",

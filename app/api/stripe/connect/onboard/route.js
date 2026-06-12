@@ -11,14 +11,17 @@ export async function POST(req) {
     const userId = session?.user?.id;
     const email  = session?.user?.email;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const body = await req.json().catch(() => ({}));
+    const botId = body.bot_id || null;
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const db = supabase();
     const origin = process.env.NEXT_PUBLIC_APP_URL || "https://botflow-eight.vercel.app";
 
     // Check if account already exists
-    let { data: existing } = await db.from("stripe_connect_accounts")
-      .select("*").eq("user_id", userId).single();
+    let scq = db.from("stripe_connect_accounts").select("*").eq("user_id", userId);
+    if (botId) scq = scq.eq("bot_id", botId); else scq = scq.is("bot_id", null);
+    let { data: existing } = await scq.single();
 
     let accountId;
     if (existing?.stripe_account_id) {
@@ -37,6 +40,7 @@ export async function POST(req) {
 
       await db.from("stripe_connect_accounts").insert({
         user_id: userId,
+        bot_id: botId,
         stripe_account_id: accountId,
         status: "pending",
         email: email || null,
@@ -52,9 +56,11 @@ export async function POST(req) {
     });
 
     // Save onboarding URL
-    await db.from("stripe_connect_accounts")
+    let upd = db.from("stripe_connect_accounts")
       .update({ onboarding_url: accountLink.url, updated_at: new Date().toISOString() })
       .eq("user_id", userId);
+    if (botId) upd = upd.eq("bot_id", botId); else upd = upd.is("bot_id", null);
+    await upd;
 
     return NextResponse.json({ url: accountLink.url });
   } catch (err) {

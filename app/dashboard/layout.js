@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { BotProvider, useBotContext } from "@/lib/bot-context";
 
 // ── AgentFlow Logo SVG ────────────────────────────────────
 function AgentLogo({ size = 36 }) {
@@ -131,6 +132,108 @@ function NavItem({ icon, label, href, active, collapsed, depth = 0 }) {
   );
 }
 
+
+// ── Bot Selector ──────────────────────────────────────────
+function BotSelector({ collapsed }) {
+  const { bots, selectedBot, setSelectedBot } = useBotContext();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  if (!bots.length) return null;
+
+  const initials = (b) => (b.name || b.phone_number_id || "B")[0].toUpperCase();
+  const color = (b) => {
+    const colors = ["#2563EB","#7C3AED","#DB2777","#D97706","#059669","#0891B2"];
+    let h = 0;
+    for (const c of (b.id || "")) h = ((h << 5) - h) + c.charCodeAt(0);
+    return colors[Math.abs(h) % colors.length];
+  };
+
+  return (
+    <div ref={ref} style={{ padding: "8px 8px 0", position: "relative" }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width: "100%", display: "flex", alignItems: "center",
+        gap: collapsed ? 0 : 8,
+        padding: collapsed ? "8px 0" : "8px 10px",
+        background: open ? "#EFF6FF" : "#F8FAFF",
+        border: "1.5px solid #E2E8F0",
+        borderRadius: 10, cursor: "pointer",
+        justifyContent: collapsed ? "center" : "flex-start",
+        transition: "all 0.12s",
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = "#EFF6FF"}
+        onMouseLeave={e => { if (!open) e.currentTarget.style.background = "#F8FAFF"; }}>
+        {selectedBot ? (
+          <>
+            <div style={{
+              width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+              background: color(selectedBot),
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 12, fontWeight: 800, color: "#fff",
+            }}>{initials(selectedBot)}</div>
+            {!collapsed && <>
+              <span style={{ flex: 1, textAlign: "left", fontSize: 13, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {selectedBot.name || selectedBot.phone_number_id || "Bot"}
+              </span>
+              <span style={{ fontSize: 9, color: T.muted }}>▾</span>
+            </>}
+          </>
+        ) : (
+          <>
+            <span style={{ fontSize: 16 }}>🤖</span>
+            {!collapsed && <span style={{ fontSize: 13, color: T.muted }}>Seleccionar bot</span>}
+          </>
+        )}
+      </button>
+      {open && !collapsed && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 8, right: 8,
+          background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: 10,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200, overflow: "hidden",
+        }}>
+          {bots.map(b => (
+            <button key={b.id} onClick={() => { setSelectedBot(b); setOpen(false); }} style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 8,
+              padding: "9px 12px", border: "none", cursor: "pointer", textAlign: "left",
+              background: selectedBot?.id === b.id ? "#EFF6FF" : "#fff",
+              borderBottom: "1px solid #F1F5F9",
+              transition: "background 0.1s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = "#F8FAFF"}
+              onMouseLeave={e => e.currentTarget.style.background = selectedBot?.id === b.id ? "#EFF6FF" : "#fff"}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: color(b), display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff",
+              }}>{initials(b)}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {b.name || "Bot sin nombre"}
+                </div>
+                {b.phone_number_id && <div style={{ fontSize: 11, color: T.muted }}>{b.phone_number_id}</div>}
+              </div>
+              {selectedBot?.id === b.id && <span style={{ fontSize: 14, color: "#2563EB" }}>✓</span>}
+            </button>
+          ))}
+          <a href="/dashboard/create" style={{
+            display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
+            textDecoration: "none", color: "#2563EB", fontWeight: 700, fontSize: 13,
+            background: "#F8FAFF",
+          }}>
+            <span style={{ fontSize: 16 }}>+</span> Nuevo bot
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Sidebar ───────────────────────────────────────────────
 function Sidebar({ collapsed }) {
   const pathname = usePathname();
@@ -206,6 +309,9 @@ function Sidebar({ collapsed }) {
           {!collapsed && <span>Nuevo Bot</span>}
         </a>
       </div>
+
+      {/* ── Bot selector ── */}
+      <BotSelector collapsed={collapsed} />
 
       {/* ── Nav groups ── */}
       <nav style={{ flex: 1, padding: "8px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
@@ -666,16 +772,18 @@ export default function DashboardLayout({ children }) {
   const sidebarWidth = collapsed ? 64 : 240;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFF", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <DynamicHead />
-      <Sidebar collapsed={collapsed} />
-      <div style={{ flex: 1, marginLeft: sidebarWidth, transition: "margin-left 0.22s ease" }}>
-        <TopBar sidebarWidth={sidebarWidth} collapsed={collapsed} setCollapsed={setCollapsed} />
-        <main style={{ marginTop: 60, minHeight: "calc(100vh - 60px)" }}>
-          {children}
-        </main>
+    <BotProvider>
+      <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFF", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+        <DynamicHead />
+        <Sidebar collapsed={collapsed} />
+        <div style={{ flex: 1, marginLeft: sidebarWidth, transition: "margin-left 0.22s ease" }}>
+          <TopBar sidebarWidth={sidebarWidth} collapsed={collapsed} setCollapsed={setCollapsed} />
+          <main style={{ marginTop: 60, minHeight: "calc(100vh - 60px)" }}>
+            {children}
+          </main>
+        </div>
+        <ChatWidget />
       </div>
-      <ChatWidget />
-    </div>
+    </BotProvider>
   );
 }

@@ -7,19 +7,20 @@ function db() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data, error } = await db()
-      .from("appointments")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(500);
+    const { searchParams } = new URL(request.url);
+    const botId = searchParams.get("bot_id");
 
+    let query = db().from("appointments").select("*").eq("user_id", userId);
+    if (botId) query = query.eq("bot_id", botId);
+    query = query.order("created_at", { ascending: false }).limit(500);
+
+    const { data, error } = await query;
     if (error) throw error;
     return NextResponse.json({ appointments: data || [] });
   } catch (err) {

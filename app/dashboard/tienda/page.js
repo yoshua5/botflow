@@ -1,6 +1,7 @@
 
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useBotContext } from "@/lib/bot-context";
 
 const BL="#2563EB",BLL="#EFF6FF",TX="#0F172A",MT="#64748B",WH="#FFFFFF",BD="#E2E8F0",RD="#EF4444",GR="#10B981",AM="#F59E0B";
 const TYPE_COLORS = { service:"#7C3AED",product:"#2563EB",package:"#059669" };
@@ -53,7 +54,7 @@ function ImgUploader({ images, onChange }) {
   );
 }
 
-function ItemModal({ item, categories, onSave, onClose }) {
+function ItemModal({ item, categories, botId, onSave, onClose }) {
   const isEdit = !!item?.id;
   const [form, setForm] = useState(item || { name:"",description:"",price:"",currency:"MXN",type:"service",category_id:"",images:[],tags:"",status:"active",sku:"",inventory:"" });
   const [saving, setSaving] = useState(false);
@@ -62,7 +63,7 @@ function ItemModal({ item, categories, onSave, onClose }) {
   async function save() {
     if (!form.name) { toast("Nombre requerido", false); return; }
     setSaving(true);
-    const body = { ...form, tags: form.tags ? form.tags.split(",").map(t=>t.trim()).filter(Boolean) : [], price: form.price||null, inventory: form.inventory||null, sku: form.sku||null, category_id: form.category_id||null };
+    const body = { ...form, bot_id: botId || null, tags: form.tags ? form.tags.split(",").map(t=>t.trim()).filter(Boolean) : [], price: form.price||null, inventory: form.inventory||null, sku: form.sku||null, category_id: form.category_id||null };
     const url  = isEdit ? `/api/catalog/items/${item.id}` : "/api/catalog/items";
     const meth = isEdit ? "PATCH" : "POST";
     const r = await fetch(url, { method:meth, headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
@@ -165,12 +166,12 @@ function ItemModal({ item, categories, onSave, onClose }) {
   );
 }
 
-function CategoryManager({ categories, onSave, onDelete }) {
+function CategoryManager({ categories, botId, onSave, onDelete }) {
   const [name, setName] = useState(""); const [saving, setSaving] = useState(false);
   async function add() {
     if (!name.trim()) return;
     setSaving(true);
-    const r = await fetch("/api/catalog/categories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ name: name.trim(), icon:"tag" }) });
+    const r = await fetch("/api/catalog/categories", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ name: name.trim(), icon:"tag", bot_id: botId || null }) });
     const d = await r.json();
     setSaving(false);
     if (d.category) { setName(""); onSave(d.category); toast("Categoria creada"); }
@@ -201,6 +202,7 @@ function CategoryManager({ categories, onSave, onDelete }) {
 }
 
 export default function TiendaPage() {
+  const { selectedBot } = useBotContext();
   const [items, setItems]       = useState([]);
   const [cats, setCats]         = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -211,14 +213,15 @@ export default function TiendaPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    const bq = selectedBot ? `?bot_id=${selectedBot.id}` : "";
     const [ir, cr] = await Promise.all([
-      fetch("/api/catalog/items").then(r=>r.json()),
-      fetch("/api/catalog/categories").then(r=>r.json()),
+      fetch(`/api/catalog/items${bq}`).then(r=>r.json()),
+      fetch(`/api/catalog/categories${bq}`).then(r=>r.json()),
     ]);
     setItems(ir.items || []);
     setCats(cr.categories || []);
     setLoading(false);
-  }, []);
+  }, [selectedBot]);
 
   useEffect(()=>{ load(); }, [load]);
 
@@ -272,7 +275,7 @@ export default function TiendaPage() {
       </div>
 
       {/* Category Manager */}
-      {showCats && <CategoryManager categories={cats} onSave={c=>setCats(cs=>[...cs,c])} onDelete={deleteCategory} />}
+      {showCats && <CategoryManager categories={cats} botId={selectedBot?.id} onSave={c=>setCats(cs=>[...cs,c])} onDelete={deleteCategory} />}
 
       {/* Filters + Search */}
       <div style={{ display:"flex",gap:10,marginBottom:20,flexWrap:"wrap" }}>
@@ -352,6 +355,7 @@ export default function TiendaPage() {
         <ItemModal
           item={modal === "create" ? null : modal}
           categories={cats}
+          botId={selectedBot?.id}
           onSave={saved => {
             if (modal === "create") setItems(i=>[saved,...i]);
             else setItems(i=>i.map(x=>x.id===saved.id?saved:x));
