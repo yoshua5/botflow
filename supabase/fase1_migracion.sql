@@ -1,28 +1,21 @@
 -- ============================================================
--- FASE 1: MIGRACIÓN COMPLETA
+-- FASE 1: MIGRACIÓN COMPLETA — versión robusta
+-- Maneja tablas que ya existen con schemas distintos
 -- Ejecutar en Supabase → SQL Editor
--- Es seguro re-ejecutar (usa IF NOT EXISTS / DO $$ BEGIN)
 -- ============================================================
 
--- Helper macro para crear políticas solo si no existen
--- (PostgreSQL no tiene CREATE POLICY IF NOT EXISTS)
 
 -- ============================================================
 -- PARTE A: LIMPIAR TABLA USERS (IDs CORRUPTOS)
 -- ============================================================
 
--- Eliminar registros donde el id ES el email (bug del auth fallback)
 DELETE FROM users WHERE id = email AND email IS NOT NULL;
-
--- Eliminar Clerk IDs sin email (residuos de pruebas viejas)
 DELETE FROM users WHERE id LIKE 'user_%' AND email IS NULL;
-
--- Verificar lo que quedó
 SELECT id, email, plan, created_at FROM users ORDER BY created_at;
 
 
 -- ============================================================
--- PARTE B: ASEGURAR COLUMNAS EN TABLA USERS
+-- PARTE B: COLUMNAS EN TABLA USERS
 -- ============================================================
 
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS name          TEXT;
@@ -38,7 +31,6 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMPTZ DEFA
 -- PARTE C: TABLAS DEL SCHEMA V2
 -- ============================================================
 
--- bots
 CREATE TABLE IF NOT EXISTS public.bots (
   id              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
   user_id         TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -61,7 +53,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- bot_configs
 CREATE TABLE IF NOT EXISTS public.bot_configs (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   bot_id               TEXT NOT NULL REFERENCES public.bots(id) ON DELETE CASCADE,
@@ -114,7 +105,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- bot_secrets
 CREATE TABLE IF NOT EXISTS public.bot_secrets (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   bot_id                TEXT NOT NULL REFERENCES public.bots(id) ON DELETE CASCADE,
@@ -136,8 +126,9 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.bot_secrets FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
+-- Agregar columna nueva si la tabla ya existía sin ella
+ALTER TABLE public.bot_secrets ADD COLUMN IF NOT EXISTS stripe_account_id_enc TEXT;
 
--- phone_mappings
 CREATE TABLE IF NOT EXISTS public.phone_mappings (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   phone_number_id TEXT NOT NULL UNIQUE,
@@ -156,7 +147,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- conversations
 CREATE TABLE IF NOT EXISTS public.conversations (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -178,7 +168,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- knowledge_files
 CREATE TABLE IF NOT EXISTS public.knowledge_files (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -200,7 +189,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- knowledge_content
 CREATE TABLE IF NOT EXISTS public.knowledge_content (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   file_id     UUID REFERENCES public.knowledge_files(id) ON DELETE CASCADE,
@@ -221,7 +209,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- analytics
 CREATE TABLE IF NOT EXISTS public.analytics (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -244,7 +231,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- message_events
 CREATE TABLE IF NOT EXISTS public.message_events (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -264,7 +250,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- subscriptions
 CREATE TABLE IF NOT EXISTS public.subscriptions (
   id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -289,7 +274,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- appointments (v2)
 CREATE TABLE IF NOT EXISTS public.appointments (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id        TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -340,6 +324,7 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.appointment_fields FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
+ALTER TABLE public.appointment_fields ADD COLUMN IF NOT EXISTS bot_id TEXT REFERENCES public.bots(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.appointment_config (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -351,8 +336,7 @@ CREATE TABLE IF NOT EXISTS public.appointment_config (
   slot_minutes   INT DEFAULT 60,
   notes          TEXT,
   created_at     TIMESTAMPTZ DEFAULT NOW(),
-  updated_at     TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, bot_id)
+  updated_at     TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE public.appointment_config ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
@@ -363,6 +347,7 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.appointment_config FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
+ALTER TABLE public.appointment_config ADD COLUMN IF NOT EXISTS bot_id TEXT REFERENCES public.bots(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.appointment_sessions (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -370,8 +355,7 @@ CREATE TABLE IF NOT EXISTS public.appointment_sessions (
   bot_id     TEXT REFERENCES public.bots(id) ON DELETE CASCADE,
   from_phone TEXT NOT NULL,
   state      JSONB DEFAULT '{}',
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, bot_id, from_phone)
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE public.appointment_sessions ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
@@ -382,6 +366,7 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.appointment_sessions FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
+ALTER TABLE public.appointment_sessions ADD COLUMN IF NOT EXISTS bot_id TEXT REFERENCES public.bots(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.catalog_categories (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -402,6 +387,7 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.catalog_categories FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
+ALTER TABLE public.catalog_categories ADD COLUMN IF NOT EXISTS bot_id TEXT REFERENCES public.bots(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.catalog_items (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -432,6 +418,7 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.catalog_items FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
+ALTER TABLE public.catalog_items ADD COLUMN IF NOT EXISTS bot_id TEXT REFERENCES public.bots(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.catalog_orders (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -471,8 +458,7 @@ CREATE TABLE IF NOT EXISTS public.stripe_connect_accounts (
   details_submitted BOOLEAN DEFAULT FALSE,
   onboarding_url    TEXT,
   created_at        TIMESTAMPTZ DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, bot_id)
+  updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE public.stripe_connect_accounts ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
@@ -483,6 +469,7 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.stripe_connect_accounts FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
+ALTER TABLE public.stripe_connect_accounts ADD COLUMN IF NOT EXISTS bot_id TEXT REFERENCES public.bots(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.payment_notifications (
   id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -612,6 +599,8 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- platform_commission: arreglar id sin default si ya existe, luego crear si no existe
+ALTER TABLE public.platform_commission ALTER COLUMN id SET DEFAULT gen_random_uuid();
 CREATE TABLE IF NOT EXISTS public.platform_commission (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   percentage NUMERIC(5,2) DEFAULT 5.00,
@@ -626,10 +615,16 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.platform_commission FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
+INSERT INTO public.platform_commission (id, percentage)
+SELECT gen_random_uuid(), 5.00
+WHERE NOT EXISTS (SELECT 1 FROM public.platform_commission);
 
-INSERT INTO public.platform_commission (percentage)
-SELECT 5.00 WHERE NOT EXISTS (SELECT 1 FROM public.platform_commission);
-
+-- db_plans: arreglar columnas faltantes y id sin default
+ALTER TABLE public.db_plans ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE public.db_plans ADD COLUMN IF NOT EXISTS price_monthly NUMERIC(8,2);
+ALTER TABLE public.db_plans ADD COLUMN IF NOT EXISTS max_bots      INT DEFAULT 1;
+ALTER TABLE public.db_plans ADD COLUMN IF NOT EXISTS features      JSONB DEFAULT '[]';
+ALTER TABLE public.db_plans ADD COLUMN IF NOT EXISTS active        BOOLEAN DEFAULT TRUE;
 CREATE TABLE IF NOT EXISTS public.db_plans (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name          TEXT NOT NULL,
@@ -648,17 +643,19 @@ DO $$ BEGIN
     CREATE POLICY "deny_all_authenticated" ON public.db_plans FOR ALL TO authenticated USING (false);
   END IF;
 END $$;
-
-INSERT INTO public.db_plans (name, price_monthly, max_bots, features)
-SELECT 'Básico', 25.00, 2, '["2 bots","Agendamiento de citas","Catálogo de productos","Soporte por email"]'
+INSERT INTO public.db_plans (id, name, price_monthly, max_bots, features)
+SELECT gen_random_uuid(), 'Básico', 25.00, 2,
+  '["2 bots","Agendamiento de citas","Catálogo de productos","Soporte por email"]'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM public.db_plans WHERE name = 'Básico');
 
-INSERT INTO public.db_plans (name, price_monthly, max_bots, features)
-SELECT 'Profesional', 50.00, 5, '["5 bots","Todo lo del Básico","Analíticas avanzadas","Soporte prioritario"]'
+INSERT INTO public.db_plans (id, name, price_monthly, max_bots, features)
+SELECT gen_random_uuid(), 'Profesional', 50.00, 5,
+  '["5 bots","Todo lo del Básico","Analíticas avanzadas","Soporte prioritario"]'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM public.db_plans WHERE name = 'Profesional');
 
-INSERT INTO public.db_plans (name, price_monthly, max_bots, features)
-SELECT 'Pro', 100.00, 25, '["25 bots","Todo lo del Profesional","API access","Soporte dedicado"]'
+INSERT INTO public.db_plans (id, name, price_monthly, max_bots, features)
+SELECT gen_random_uuid(), 'Pro', 100.00, 25,
+  '["25 bots","Todo lo del Profesional","API access","Soporte dedicado"]'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM public.db_plans WHERE name = 'Pro');
 
 
@@ -666,19 +663,19 @@ WHERE NOT EXISTS (SELECT 1 FROM public.db_plans WHERE name = 'Pro');
 -- PARTE F: ÍNDICES
 -- ============================================================
 
-CREATE INDEX IF NOT EXISTS idx_bots_user_id          ON public.bots(user_id);
-CREATE INDEX IF NOT EXISTS idx_bots_phone_number_id  ON public.bots(phone_number_id);
-CREATE INDEX IF NOT EXISTS idx_bot_configs_bot_id    ON public.bot_configs(bot_id);
-CREATE INDEX IF NOT EXISTS idx_bot_secrets_bot_id    ON public.bot_secrets(bot_id);
-CREATE INDEX IF NOT EXISTS idx_phone_mappings_phone  ON public.phone_mappings(phone_number_id);
+CREATE INDEX IF NOT EXISTS idx_bots_user_id           ON public.bots(user_id);
+CREATE INDEX IF NOT EXISTS idx_bots_phone_number_id   ON public.bots(phone_number_id);
+CREATE INDEX IF NOT EXISTS idx_bot_configs_bot_id     ON public.bot_configs(bot_id);
+CREATE INDEX IF NOT EXISTS idx_bot_secrets_bot_id     ON public.bot_secrets(bot_id);
+CREATE INDEX IF NOT EXISTS idx_phone_mappings_phone   ON public.phone_mappings(phone_number_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_user_bot ON public.conversations(user_id, bot_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_from    ON public.conversations(from_phone);
-CREATE INDEX IF NOT EXISTS idx_appointments_user_bot ON public.appointments(user_id, bot_id);
-CREATE INDEX IF NOT EXISTS idx_appointments_status   ON public.appointments(status);
-CREATE INDEX IF NOT EXISTS idx_analytics_user_date   ON public.analytics(user_id, date);
-CREATE INDEX IF NOT EXISTS idx_message_events_user   ON public.message_events(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_conversations_from     ON public.conversations(from_phone);
+CREATE INDEX IF NOT EXISTS idx_appointments_user_bot  ON public.appointments(user_id, bot_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_status    ON public.appointments(status);
+CREATE INDEX IF NOT EXISTS idx_analytics_user_date    ON public.analytics(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_message_events_user    ON public.message_events(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_catalog_items_user_bot ON public.catalog_items(user_id, bot_id);
-CREATE INDEX IF NOT EXISTS idx_catalog_items_status  ON public.catalog_items(status);
+CREATE INDEX IF NOT EXISTS idx_catalog_items_status   ON public.catalog_items(status);
 
 
 -- ============================================================
